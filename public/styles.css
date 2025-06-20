@@ -21,7 +21,7 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
+    height: 90vh;
     line-height: 1.6;
 }
 
@@ -115,11 +115,11 @@ body {
 
 .main-content {
     display: flex;
-    min-height: calc(100vh - 140px);
+    min-height: 85vh;
 }
 
 .section {
-    padding: 30px;
+    padding: 10px;
     flex: 1;
 }
 
@@ -135,6 +135,7 @@ body {
 .management-section {
     background: white;
     flex: 2;
+    /* margin-top: 120px; */
 }
 
 .section-header {
@@ -143,7 +144,7 @@ body {
 
 .section-title {
     font-size: 1.3rem;
-    margin-bottom: 5px;
+    /* margin-bottom: 5px; */
     color: #333;
     display: flex;
     align-items: center;
@@ -166,21 +167,18 @@ body {
    =========================================== */
 
 .request-form {
-    background: white;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom: 25px;
+    padding: 15px;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+    font-weight: 500;
     color: #4C6798;
 }
 
@@ -188,7 +186,7 @@ body {
 .form-group select, 
 .form-group textarea {
     width: 100%;
-    padding: 12px 16px;
+    padding: 8px 15px;
     border: 2px solid #e9ecef;
     border-radius: 8px;
     font-size: 14px;
@@ -206,7 +204,7 @@ body {
 
 .form-group textarea {
     resize: vertical;
-    min-height: 60px;
+    height: 39px;
 }
 
 /* ===========================================
@@ -233,8 +231,8 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background-color: #B2C4EA;
+    color: #234A7C;
 }
 
 .btn-success {
@@ -243,7 +241,7 @@ body {
 }
 
 .btn-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background-color: #778DBE;
     color: white;
 }
 
@@ -348,7 +346,7 @@ body {
 }
 
 .requests-list {
-    max-height: 70vh;
+    max-height: 30vh;
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -454,9 +452,9 @@ body {
 }
 
 .status-badge {
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.6rem;
     font-weight: bold;
     color: white;
 }
@@ -467,7 +465,10 @@ body {
 .status-available-separated { background: #6f42c1; }
 
 .request-body {
-    margin-bottom: 15px;
+    /* margin-bottom: 5px; */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .request-info {
@@ -513,7 +514,7 @@ body {
     align-items: center;
     border-bottom: 1px solid #dee2e6;
     flex-wrap: wrap;
-    gap: 20px;
+    /* gap: 20px; */
 }
 
 .stat-item {
@@ -1092,7 +1093,7 @@ body {
     }
     
     .room-layout {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(5, 1fr) auto;
     }
     
@@ -1116,7 +1117,7 @@ body {
     }
     
     .section {
-        padding: 20px 15px;
+        padding: 10px;
     }
     
     .stats-bar {
@@ -1134,10 +1135,10 @@ body {
     }
     
     .room-layout {
-        padding: 15px;
-        gap: 15px;
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(9, 1fr) auto;
+        padding: 10px;
+        gap: 10px;
+        /* grid-template-columns: 1fr;
+        grid-template-rows: repeat(9, 1fr) auto; */
     }
     
     .zone-wide {
@@ -1230,4 +1231,15 @@ nav{
     bottom: 0;
     width: 100%;
     z-index: 1000;
+}
+
+#available-places-resume{
+    font-size: 0.7rem;
+}
+
+#body-index{
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
 }

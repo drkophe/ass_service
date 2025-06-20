@@ -3,22 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <title>Gestion des Places - Demandes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body id="body-index">
     <nav>
         <div class="navigation">
-                <a href="/" class="nav-link active">📋 Demandes</a>
-                <a href="/salle" class="nav-link">🎪 Salle</a>
+                <a href="/" class="nav-link active">Demandes</a>
+                <a href="/salle" class="nav-link">Salle</a>
         </div>
     </nav>
     <div class="container">
 
+
+
+        <div class="main-content">
             <!-- Section pour gérer les demandes -->
             <div class="section management-section">
                 <h2 class="section-title">Demandes en cours</h2>
+                <p id="available-places-resume"><span id="totalAvailable">1509</span> places disponibles</p>
                 
                 <div class="filters">
                     <select id="statusFilter" onchange="filterRequests()">
@@ -37,31 +42,18 @@
                     </div>
                 </div>
             </div>
-
-        <div class="main-content">
+            
             <!-- Section pour faire une demande de place -->
             <div class="section request-section">
-                <div class="section-header">
-                    <h2 class="section-title">Faire une demande</h2>
-                    
-                    <!-- <div class="connection-info">
-                        <div class="connection-status" id="connectionStatus">
-                            🔴 Déconnexion...
-                        </div>
-                        <div class="connected-users">
-                            <span id="connectedCount">0</span> utilisateur(s) connecté(s)
-                        </div>
-                    </div> -->
-                </div>
 
                 <form id="requestForm" class="request-form">
                     <div class="form-group">
-                        <label for="userName">Votre nom *</label>
+                        <label for="userName">Votre nom</label>
                         <input type="text" id="userName" required placeholder="Entrez votre nom">
                     </div>
 
                     <div class="form-group">
-                        <label for="placesNeeded">Nombre de places nécessaires *</label>
+                        <label for="placesNeeded">Nombre de places nécessaires</label>
                         <input type="number" id="placesNeeded" min="1" max="20" required placeholder="Ex: 4">
                     </div>
 
@@ -71,17 +63,9 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        ➕ Créer la demande
+                        + Créer la demande
                     </button>
                 </form>
-
-                <!-- Résumé compact des places disponibles -->
-                <div class="zones-summary-compact" id="zonesSummaryCompact">
-                    <h4>📊 Places disponibles</h4>
-                    <div class="zones-total">
-                        <span id="totalAvailable">1509</span> places disponibles
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -410,7 +394,7 @@
                     ${request.status === 'pending' ? `
                         <div class="request-actions">
                             <button class="btn btn-warning" onclick="takeInCharge('${request.id}')">
-                                ⏳ Prendre en charge
+                                Prendre en charge
                             </button>
                         </div>
                     ` : ''}
