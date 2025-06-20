@@ -51,16 +51,20 @@ const PORT = process.env.PORT || 3000;
 let requests = new Map();
 
 /**
- * État des 6 zones de la salle
+ * État des 10 zones de la salle
  * Ces données sont synchronisées avec les demandes acceptées
  */
 let zones = {
-    'front-left': { current: 50, max: 50, name: 'Devant Gauche' },
-    'front-center': { current: 65, max: 65, name: 'Devant Milieu' },
-    'front-right': { current: 50, max: 50, name: 'Devant Droite' },
-    'back-left': { current: 40, max: 40, name: 'Derrière Gauche' },
-    'back-center': { current: 55, max: 55, name: 'Derrière Milieu' },
-    'back-right': { current: 40, max: 40, name: 'Derrière Droite' }
+    'zone-d': { current: 122, max: 122, name: 'Zone D' },
+    'zone-c': { current: 160, max: 160, name: 'Zone C' },
+    'zone-b': { current: 122, max: 122, name: 'Zone B' },
+    'zone-e': { current: 147, max: 147, name: 'Zone E' },
+    'zone-f': { current: 146, max: 146, name: 'Zone F' },
+    'zone-g': { current: 137, max: 137, name: 'Zone G' },
+    'zone-j': { current: 105, max: 105, name: 'Zone J' },
+    'zone-i': { current: 264, max: 264, name: 'Zone I' },
+    'zone-h': { current: 97, max: 97, name: 'Zone H' },
+    'zone-l': { current: 109, max: 109, name: 'Zone L (Salle secondaire)' }
 };
 
 /**
@@ -106,12 +110,16 @@ app.post('/api/reset', (req, res) => {
     
     // Reset des zones
     zones = {
-        'front-left': { current: 50, max: 50, name: 'Devant Gauche' },
-        'front-center': { current: 65, max: 65, name: 'Devant Milieu' },
-        'front-right': { current: 50, max: 50, name: 'Devant Droite' },
-        'back-left': { current: 40, max: 40, name: 'Derrière Gauche' },
-        'back-center': { current: 55, max: 55, name: 'Derrière Milieu' },
-        'back-right': { current: 40, max: 40, name: 'Derrière Droite' }
+        'zone-d': { current: 122, max: 122, name: 'Zone D' },
+        'zone-c': { current: 160, max: 160, name: 'Zone C' },
+        'zone-b': { current: 122, max: 122, name: 'Zone B' },
+        'zone-e': { current: 147, max: 147, name: 'Zone E' },
+        'zone-f': { current: 146, max: 146, name: 'Zone F' },
+        'zone-g': { current: 137, max: 137, name: 'Zone G' },
+        'zone-j': { current: 105, max: 105, name: 'Zone J' },
+        'zone-i': { current: 264, max: 264, name: 'Zone I' },
+        'zone-h': { current: 97, max: 97, name: 'Zone H' },
+        'zone-l': { current: 109, max: 109, name: 'Zone L (Salle secondaire)' }
     };
     
     // Notification de tous les clients
@@ -207,7 +215,7 @@ io.on('connection', (socket) => {
     socket.on('create_request', (requestData) => {
         try {
             // Validation des données
-            if (!requestData.userName || !requestData.placesNeeded || !requestData.priority) {
+            if (!requestData.userName || !requestData.placesNeeded) {
                 socket.emit('error', 'Données de demande invalides');
                 return;
             }
@@ -217,12 +225,12 @@ io.on('connection', (socket) => {
                 id: uuidv4(),
                 userName: requestData.userName.trim(),
                 placesNeeded: parseInt(requestData.placesNeeded),
-                priority: requestData.priority,
                 comment: requestData.comment?.trim() || null,
                 status: 'pending',
                 timestamp: new Date().toISOString(),
                 createdBy: socket.id,
                 handledBy: null,
+                handledByName: null, // Nom de la personne qui traite
                 assignedZone: null // Nouvelle propriété pour la zone assignée
             };
             
@@ -253,7 +261,7 @@ io.on('connection', (socket) => {
      */
     socket.on('update_request_status', (updateData) => {
         try {
-            const { requestId, status, handledBy, assignedZone } = updateData;
+            const { requestId, status, handledBy, handledByName, assignedZone } = updateData;
             
             if (!requests.has(requestId)) {
                 socket.emit('error', 'Demande introuvable');
@@ -265,9 +273,8 @@ io.on('connection', (socket) => {
             // Validation des transitions de statut
             const validTransitions = {
                 'pending': ['in-progress'],
-                'in-progress': ['available', 'not-available', 'available-separated'],
+                'in-progress': ['available', 'available-separated'], // Plus de retour en pending
                 'available': [],
-                'not-available': ['pending'],
                 'available-separated': []
             };
             
@@ -280,19 +287,21 @@ io.on('connection', (socket) => {
             const oldStatus = request.status;
             request.status = status;
             request.handledBy = handledBy || socket.id;
+            request.handledByName = handledByName || 'Utilisateur anonyme';
             request.lastUpdated = new Date().toISOString();
             
-            // Gestion automatique des places quand demande acceptée
-            if (status === 'available' && assignedZone) {
+            // Gestion automatique des places pour acceptation (normale ou séparée)
+            if ((status === 'available' || status === 'available-separated') && assignedZone) {
                 if (checkZoneAvailability(assignedZone, request.placesNeeded)) {
                     request.assignedZone = assignedZone;
                     updateZonePlaces(assignedZone, request.placesNeeded, request.id);
-                    console.log(`✅ Demande ${request.id} acceptée - ${request.placesNeeded} places retirées de ${assignedZone}`);
+                    const statusText = status === 'available-separated' ? 'acceptée (places séparées)' : 'acceptée';
+                    console.log(`✅ Demande ${request.id} ${statusText} - ${request.placesNeeded} places retirées de ${assignedZone}`);
                 } else {
                     socket.emit('error', `Pas assez de places en ${assignedZone}`);
                     return;
                 }
-            } else if (status === 'available' && !assignedZone) {
+            } else if ((status === 'available' || status === 'available-separated') && !assignedZone) {
                 // Auto-assignation de zone si pas spécifiée
                 const bestZone = findBestAvailableZone(request.placesNeeded);
                 if (bestZone) {

@@ -28,11 +28,11 @@
         <div class="stats-bar">
             <div class="stat-item">
                 <span class="stat-label">Places totales :</span>
-                <span class="stat-value" id="totalPlaces">300</span>
+                <span class="stat-value" id="totalPlaces">1509</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">Places disponibles :</span>
-                <span class="stat-value" id="availablePlaces">300</span>
+                <span class="stat-value" id="availablePlaces">1509</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">Taux d'occupation :</span>
@@ -44,56 +44,81 @@
             </div>
         </div>
 
-        <!-- Grille des 6 zones de la salle -->
+        <!-- Grille des 10 zones de la salle -->
         <div class="room-layout">
-            <!-- Première rangée (Devant) -->
-            <div class="zone" data-zone="front-left" onclick="openControlPanel('front-left')">
-                <div class="zone-title">Devant Gauche</div>
-                <div class="zone-info" id="front-left-count">50</div>
-                <div class="zone-capacity">/ <span id="front-left-max">50</span> places</div>
-                <div class="zone-percentage" id="front-left-percentage">100%</div>
-                <div class="zone-requests" id="front-left-requests"></div>
+            <!-- Première rangée -->
+            <div class="zone" data-zone="zone-d" onclick="openControlPanel('zone-d')">
+                <div class="zone-title">Zone D</div>
+                <div class="zone-info" id="zone-d-count">122</div>
+                <div class="zone-capacity">/ <span id="zone-d-max">122</span> places</div>
+                <div class="zone-percentage" id="zone-d-percentage">100%</div>
             </div>
             
-            <div class="zone" data-zone="front-center" onclick="openControlPanel('front-center')">
-                <div class="zone-title">Devant Milieu</div>
-                <div class="zone-info" id="front-center-count">65</div>
-                <div class="zone-capacity">/ <span id="front-center-max">65</span> places</div>
-                <div class="zone-percentage" id="front-center-percentage">100%</div>
-                <div class="zone-requests" id="front-center-requests"></div>
+            <div class="zone" data-zone="zone-c" onclick="openControlPanel('zone-c')">
+                <div class="zone-title">Zone C</div>
+                <div class="zone-info" id="zone-c-count">160</div>
+                <div class="zone-capacity">/ <span id="zone-c-max">160</span> places</div>
+                <div class="zone-percentage" id="zone-c-percentage">100%</div>
             </div>
             
-            <div class="zone" data-zone="front-right" onclick="openControlPanel('front-right')">
-                <div class="zone-title">Devant Droite</div>
-                <div class="zone-info" id="front-right-count">50</div>
-                <div class="zone-capacity">/ <span id="front-right-max">50</span> places</div>
-                <div class="zone-percentage" id="front-right-percentage">100%</div>
-                <div class="zone-requests" id="front-right-requests"></div>
+            <div class="zone" data-zone="zone-b" onclick="openControlPanel('zone-b')">
+                <div class="zone-title">Zone B</div>
+                <div class="zone-info" id="zone-b-count">122</div>
+                <div class="zone-capacity">/ <span id="zone-b-max">122</span> places</div>
+                <div class="zone-percentage" id="zone-b-percentage">100%</div>
             </div>
 
-            <!-- Deuxième rangée (Derrière) -->
-            <div class="zone" data-zone="back-left" onclick="openControlPanel('back-left')">
-                <div class="zone-title">Derrière Gauche</div>
-                <div class="zone-info" id="back-left-count">40</div>
-                <div class="zone-capacity">/ <span id="back-left-max">40</span> places</div>
-                <div class="zone-percentage" id="back-left-percentage">100%</div>
-                <div class="zone-requests" id="back-left-requests"></div>
+            <!-- Deuxième rangée -->
+            <div class="zone" data-zone="zone-e" onclick="openControlPanel('zone-e')">
+                <div class="zone-title">Zone E</div>
+                <div class="zone-info" id="zone-e-count">147</div>
+                <div class="zone-capacity">/ <span id="zone-e-max">147</span> places</div>
+                <div class="zone-percentage" id="zone-e-percentage">100%</div>
             </div>
             
-            <div class="zone" data-zone="back-center" onclick="openControlPanel('back-center')">
-                <div class="zone-title">Derrière Milieu</div>
-                <div class="zone-info" id="back-center-count">55</div>
-                <div class="zone-capacity">/ <span id="back-center-max">55</span> places</div>
-                <div class="zone-percentage" id="back-center-percentage">100%</div>
-                <div class="zone-requests" id="back-center-requests"></div>
+            <div class="zone" data-zone="zone-f" onclick="openControlPanel('zone-f')">
+                <div class="zone-title">Zone F</div>
+                <div class="zone-info" id="zone-f-count">146</div>
+                <div class="zone-capacity">/ <span id="zone-f-max">146</span> places</div>
+                <div class="zone-percentage" id="zone-f-percentage">100%</div>
             </div>
             
-            <div class="zone" data-zone="back-right" onclick="openControlPanel('back-right')">
-                <div class="zone-title">Derrière Droite</div>
-                <div class="zone-info" id="back-right-count">40</div>
-                <div class="zone-capacity">/ <span id="back-right-max">40</span> places</div>
-                <div class="zone-percentage" id="back-right-percentage">100%</div>
-                <div class="zone-requests" id="back-right-requests"></div>
+            <div class="zone" data-zone="zone-g" onclick="openControlPanel('zone-g')">
+                <div class="zone-title">Zone G</div>
+                <div class="zone-info" id="zone-g-count">137</div>
+                <div class="zone-capacity">/ <span id="zone-g-max">137</span> places</div>
+                <div class="zone-percentage" id="zone-g-percentage">100%</div>
+            </div>
+
+            <!-- Troisième rangée -->
+            <div class="zone" data-zone="zone-j" onclick="openControlPanel('zone-j')">
+                <div class="zone-title">Zone J</div>
+                <div class="zone-info" id="zone-j-count">105</div>
+                <div class="zone-capacity">/ <span id="zone-j-max">105</span> places</div>
+                <div class="zone-percentage" id="zone-j-percentage">100%</div>
+            </div>
+            
+            <div class="zone" data-zone="zone-i" onclick="openControlPanel('zone-i')">
+                <div class="zone-title">Zone I</div>
+                <div class="zone-info" id="zone-i-count">264</div>
+                <div class="zone-capacity">/ <span id="zone-i-max">264</span> places</div>
+                <div class="zone-percentage" id="zone-i-percentage">100%</div>
+            </div>
+            
+            <div class="zone" data-zone="zone-h" onclick="openControlPanel('zone-h')">
+                <div class="zone-title">Zone H</div>
+                <div class="zone-info" id="zone-h-count">97</div>
+                <div class="zone-capacity">/ <span id="zone-h-max">97</span> places</div>
+                <div class="zone-percentage" id="zone-h-percentage">100%</div>
+            </div>
+
+            <!-- Quatrième rangée (zone spéciale) -->
+            <div class="zone zone-secondary zone-wide" data-zone="zone-l" onclick="openControlPanel('zone-l')">
+                <div class="zone-title">Zone L</div>
+                <div class="zone-subtitle">(Salle secondaire)</div>
+                <div class="zone-info" id="zone-l-count">109</div>
+                <div class="zone-capacity">/ <span id="zone-l-max">109</span> places</div>
+                <div class="zone-percentage" id="zone-l-percentage">100%</div>
             </div>
         </div>
 
@@ -137,11 +162,6 @@
             </div>
         </div>
         
-        <!-- Informations sur les demandes liées à cette zone -->
-        <div class="zone-requests-info" id="zoneRequestsInfo">
-            <!-- Les demandes liées seront affichées ici -->
-        </div>
-        
         <div class="control-buttons">
             <!-- Boutons de diminution -->
             <button class="control-btn btn-decrease" onclick="updateZone(-10)">-10</button>
@@ -152,12 +172,6 @@
             <button class="control-btn btn-increase" onclick="updateZone(+1)">+1</button>
             <button class="control-btn btn-increase" onclick="updateZone(+5)">+5</button>
             <button class="control-btn btn-increase" onclick="updateZone(+10)">+10</button>
-        </div>
-        
-        <div class="control-info">
-            <p>💡 <strong>Astuce :</strong> Utilisez les touches du clavier :</p>
-            <p>• <kbd>1</kbd> = +1 • <kbd>5</kbd> = +5 • <kbd>-</kbd> = -1 • <kbd>_</kbd> = -5</p>
-            <p>• <kbd>Échap</kbd> = Fermer</p>
         </div>
         
         <button class="control-btn btn-close" onclick="closeControlPanel()">
@@ -266,20 +280,17 @@
             }
         });
 
-        // Gestion des demandes
+        // Gestion des demandes (maintenant simplifiée)
         socket.on('new_request', (request) => {
             requests.set(request.id, request);
-            updateZoneRequestsDisplay();
         });
 
         socket.on('request_updated', (request) => {
             requests.set(request.id, request);
-            updateZoneRequestsDisplay();
         });
 
         socket.on('request_deleted', (data) => {
             requests.delete(data.requestId);
-            updateZoneRequestsDisplay();
         });
 
         socket.on('users_count', (count) => {
@@ -329,7 +340,6 @@
             Object.keys(zones).forEach(zoneId => {
                 updateZoneDisplay(zoneId);
             });
-            updateZoneRequestsDisplay();
         }
 
         function updateZoneDisplay(zoneId) {
@@ -376,30 +386,6 @@
             }
         }
 
-        function updateZoneRequestsDisplay() {
-            Object.keys(zones).forEach(zoneId => {
-                const requestsElement = document.getElementById(`${zoneId}-requests`);
-                if (!requestsElement) return;
-                
-                // Trouver les demandes assignées à cette zone
-                const zoneRequests = Array.from(requests.values())
-                    .filter(request => request.assignedZone === zoneId && request.status === 'available')
-                    .slice(0, 2); // Limiter à 2 demandes affichées
-                
-                if (zoneRequests.length > 0) {
-                    requestsElement.innerHTML = zoneRequests.map(request => 
-                        `<div class="zone-request-badge">${request.userName} (${request.placesNeeded})</div>`
-                    ).join('');
-                } else {
-                    requestsElement.innerHTML = '';
-                }
-            });
-        }
-
-        // ===========================================
-        // GESTION DU PANNEAU DE CONTRÔLE
-        // ===========================================
-
         function openControlPanel(zoneId) {
             const zone = zones[zoneId];
             if (!zone) return;
@@ -412,9 +398,6 @@
             document.getElementById('controlTitle').textContent = zone.name;
             document.getElementById('controlCurrentCount').textContent = zone.current;
             document.getElementById('controlMaxCount').textContent = zone.max;
-            
-            // Affichage des demandes liées à cette zone
-            updateZoneRequestsInfo(zoneId);
             
             // Affichage du panneau
             document.getElementById('controlPanel').classList.add('active');
@@ -430,43 +413,6 @@
             document.body.style.overflow = 'auto';
             
             currentZone = null;
-        }
-
-        function updateZoneRequestsInfo(zoneId) {
-            const infoElement = document.getElementById('zoneRequestsInfo');
-            const zoneRequests = Array.from(requests.values())
-                .filter(request => request.assignedZone === zoneId);
-            
-            if (zoneRequests.length > 0) {
-                infoElement.innerHTML = `
-                    <h4>📋 Demandes assignées à cette zone :</h4>
-                    <div class="zone-requests-list">
-                        ${zoneRequests.map(request => `
-                            <div class="zone-request-item status-${request.status}">
-                                <strong>${request.userName}</strong> - ${request.placesNeeded} place(s)
-                                <span class="request-status">${getStatusText(request.status)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } else {
-                infoElement.innerHTML = `
-                    <div class="no-requests">
-                        <p>📭 Aucune demande assignée à cette zone</p>
-                    </div>
-                `;
-            }
-        }
-
-        function getStatusText(status) {
-            const statusTexts = {
-                'pending': '⏳ En attente',
-                'in-progress': '🔄 En cours',
-                'available': '✅ Attribuée',
-                'not-available': '❌ Non disponible',
-                'available-separated': '⚠️ Séparée'
-            };
-            return statusTexts[status] || status;
         }
 
         // ===========================================

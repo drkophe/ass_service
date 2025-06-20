@@ -48,17 +48,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="priority">Priorité *</label>
-                        <select id="priority" required>
-                            <option value="">Sélectionnez la priorité</option>
-                            <option value="low">🟢 Basse</option>
-                            <option value="medium">🟡 Moyenne</option>
-                            <option value="high">🟠 Haute</option>
-                            <option value="urgent">🔴 Urgente</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
                         <label for="comment">Commentaire (optionnel)</label>
                         <textarea id="comment" placeholder="Informations supplémentaires..." rows="2"></textarea>
                     </div>
@@ -68,11 +57,11 @@
                     </button>
                 </form>
 
-                <!-- Résumé des places disponibles -->
-                <div class="zones-summary" id="zonesSummary">
-                    <h3>📊 Places disponibles par zone</h3>
-                    <div class="zones-grid" id="zonesGrid">
-                        <!-- Les zones seront ajoutées dynamiquement -->
+                <!-- Résumé compact des places disponibles -->
+                <div class="zones-summary-compact" id="zonesSummaryCompact">
+                    <h4>📊 Places disponibles</h4>
+                    <div class="zones-total">
+                        <span id="totalAvailable">1509</span> places disponibles
                     </div>
                 </div>
             </div>
@@ -86,9 +75,8 @@
                         <option value="all">Tous les statuts</option>
                         <option value="pending">En attente</option>
                         <option value="in-progress">En cours</option>
-                        <option value="available">Disponible</option>
-                        <option value="not-available">Non disponible</option>
-                        <option value="available-separated">Disponible séparé</option>
+                        <option value="available">Attribué</option>
+                        <option value="available-separated">Attribué (séparé)</option>
                     </select>
                 </div>
                 
@@ -102,20 +90,46 @@
         </div>
     </div>
 
-    <!-- Modale pour assigner une zone -->
+    <!-- Modale pour traiter une demande -->
     <div class="modal-overlay" id="zoneModalOverlay" onclick="closeZoneModal()">
         <div class="modal" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3>🎯 Assigner une zone</h3>
+                <h3 id="modalTitle">🎯 Traiter la demande</h3>
                 <button class="btn-close" onclick="closeZoneModal()">✖</button>
             </div>
             <div class="modal-body">
-                <p>Sélectionnez la zone pour cette demande :</p>
-                <div class="zone-selection" id="zoneSelection">
-                    <!-- Les zones disponibles seront ajoutées dynamiquement -->
+                <div class="form-group">
+                    <label for="handlerName">Votre nom *</label>
+                    <input type="text" id="handlerName" required placeholder="Qui traite cette demande ?">
                 </div>
+                
+                <!-- Choix du type de traitement (visible lors de la prise en charge) -->
+                <div id="treatmentChoice" style="display: none;">
+                    <p><strong>Comment traiter cette demande ?</strong></p>
+                    <div class="treatment-buttons">
+                        <button class="btn btn-success" onclick="selectTreatment('available')">
+                            ✅ Places normales (ensemble)
+                        </button>
+                        <button class="btn btn-warning" onclick="selectTreatment('available-separated')">
+                            ⚠️ Places séparées (pas côte à côte)
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Sélection de zone (visible après choix du traitement) -->
+                <div id="zoneChoice" style="display: none;">
+                    <p>Sélectionnez la zone pour cette demande :</p>
+                    <div class="zone-selection" id="zoneSelection">
+                        <!-- Les zones disponibles seront ajoutées dynamiquement -->
+                    </div>
+                </div>
+                
                 <div class="modal-info">
                     <strong>Demande :</strong> <span id="modalRequestInfo"></span>
+                </div>
+                
+                <div class="status-info" id="statusInfo">
+                    <!-- Informations sur le type d'attribution -->
                 </div>
             </div>
             <div class="modal-footer">
@@ -214,8 +228,7 @@
             const statusMessages = {
                 'in-progress': '⏳ Demande prise en charge',
                 'available': '✅ Places attribuées',
-                'not-available': '❌ Places non disponibles',
-                'available-separated': '⚠️ Places disponibles mais séparées'
+                'available-separated': '✅ Places attribuées (séparées)'
             };
             
             if (statusMessages[request.status]) {
@@ -269,12 +282,11 @@
             const formData = {
                 userName: document.getElementById('userName').value.trim(),
                 placesNeeded: parseInt(document.getElementById('placesNeeded').value),
-                priority: document.getElementById('priority').value,
                 comment: document.getElementById('comment').value.trim()
             };
             
             // Validation
-            if (!formData.userName || !formData.placesNeeded || !formData.priority) {
+            if (!formData.userName || !formData.placesNeeded) {
                 showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
                 return;
             }
@@ -344,26 +356,17 @@
             div.setAttribute('data-request-id', request.id);
             
             const date = new Date(request.timestamp);
-            const formattedDate = date.toLocaleString('fr-FR', {
+            const formattedTime = date.toLocaleString('fr-FR', {
                 hour: "2-digit",
-                minute: "2-digit",
-                day: "2-digit",
-                month: "2-digit"
+                minute: "2-digit"
             });
-            
-            const priorityEmojis = {
-                'low': '🟢',
-                'medium': '🟡', 
-                'high': '🟠',
-                'urgent': '🔴'
-            };
             
             const statusTexts = {
                 'pending': 'En attente',
                 'in-progress': 'En cours de traitement',
                 'available': 'Places attribuées',
                 'not-available': 'Non disponible',
-                'available-separated': 'Disponible séparé'
+                'available-separated': 'Places attribuées (séparées)'
             };
 
             div.innerHTML = `
@@ -385,11 +388,7 @@
                         </div>
                         <div class="info-item">
                             <span class="icon">🕐</span>
-                            ${formattedDate}
-                        </div>
-                        <div class="info-item">
-                            <span class="icon">${priorityEmojis[request.priority]}</span>
-                            Priorité ${request.priority}
+                            ${formattedTime}
                         </div>
                         ${request.comment ? `
                             <div class="info-item">
@@ -403,26 +402,18 @@
                                 Zone: ${zones[request.assignedZone]?.name || request.assignedZone}
                             </div>
                         ` : ''}
+                        ${request.handledByName ? `
+                            <div class="info-item">
+                                <span class="icon">✋</span>
+                                Traité par: ${request.handledByName}
+                            </div>
+                        ` : ''}
                     </div>
 
                     ${request.status === 'pending' ? `
                         <div class="request-actions">
                             <button class="btn btn-warning" onclick="takeInCharge('${request.id}')">
                                 ⏳ Prendre en charge
-                            </button>
-                        </div>
-                    ` : ''}
-
-                    ${request.status === 'in-progress' ? `
-                        <div class="request-actions">
-                            <button class="btn btn-success" onclick="openZoneModal('${request.id}', 'available')">
-                                ✅ Attribuer des places
-                            </button>
-                            <button class="btn btn-danger" onclick="updateRequestStatus('${request.id}', 'not-available')">
-                                ❌ Non disponible
-                            </button>
-                            <button class="btn btn-warning" onclick="updateRequestStatus('${request.id}', 'available-separated')">
-                                ⚠️ Places séparées
                             </button>
                         </div>
                     ` : ''}
@@ -438,10 +429,17 @@
 
         function takeInCharge(requestId) {
             console.log('⏳ Prise en charge de la demande:', requestId);
+            
+            // 1. Mettre la demande en "in-progress"
             socket.emit('update_request_status', {
                 requestId: requestId,
                 status: 'in-progress'
             });
+            
+            // 2. Ouvrir immédiatement la modale pour traiter
+            setTimeout(() => {
+                openZoneModal(requestId, 'process-request');
+            }, 100); // Petit délai pour que l'état soit mis à jour
         }
 
         function updateRequestStatus(requestId, status) {
@@ -453,18 +451,79 @@
         }
 
         // ===========================================
-        // GESTION DE LA MODALE D'ASSIGNATION DE ZONE
+        // GESTION DE LA MODALE DE TRAITEMENT
         // ===========================================
 
-        function openZoneModal(requestId, targetStatus) {
+        function openZoneModal(requestId, action) {
             const request = currentRequests.get(requestId);
             if (!request) return;
             
-            currentRequestForZone = { requestId, targetStatus };
+            currentRequestForZone = { requestId, action };
             
             // Mise à jour du contenu de la modale
             document.getElementById('modalRequestInfo').textContent = 
                 `${request.userName} - ${request.placesNeeded} place(s)`;
+            
+            // Reset des éléments de la modale
+            document.getElementById('handlerName').value = '';
+            document.getElementById('treatmentChoice').style.display = 'none';
+            document.getElementById('zoneChoice').style.display = 'none';
+            document.getElementById('statusInfo').innerHTML = '';
+            document.getElementById('confirmZoneBtn').disabled = true;
+            
+            if (action === 'process-request') {
+                // Mode traitement : demande déjà en cours, afficher le choix du traitement
+                document.getElementById('modalTitle').textContent = '🎯 Traiter la demande';
+                document.getElementById('treatmentChoice').style.display = 'block';
+                document.getElementById('confirmZoneBtn').textContent = '➡️ Continuer';
+            } else {
+                // Mode direct (available ou available-separated) - ne devrait plus arriver
+                document.getElementById('modalTitle').textContent = '🎯 Attribuer des places';
+                currentRequestForZone.targetStatus = action;
+                showZoneSelection(request, action);
+                document.getElementById('confirmZoneBtn').textContent = '✅ Confirmer l\'attribution';
+            }
+            
+            // Affichage de la modale
+            document.getElementById('zoneModalOverlay').style.display = 'flex';
+        }
+
+        function selectTreatment(treatmentType) {
+            const request = currentRequests.get(currentRequestForZone.requestId);
+            if (!request) return;
+            
+            currentRequestForZone.targetStatus = treatmentType;
+            
+            // Masquer le choix de traitement et afficher la sélection de zone
+            document.getElementById('treatmentChoice').style.display = 'none';
+            showZoneSelection(request, treatmentType);
+            document.getElementById('confirmZoneBtn').textContent = '✅ Confirmer l\'attribution';
+            
+            // Révaluer l'état du bouton maintenant qu'on est en mode attribution
+            onZoneSelected();
+        }
+
+        function showZoneSelection(request, treatmentType) {
+            // Afficher la sélection de zone
+            document.getElementById('zoneChoice').style.display = 'block';
+            
+            // Information sur le type d'attribution
+            const statusInfo = document.getElementById('statusInfo');
+            if (treatmentType === 'available-separated') {
+                statusInfo.innerHTML = `
+                    <div class="separated-info">
+                        ⚠️ <strong>Attribution avec places séparées</strong><br>
+                        <small>Les personnes ne seront pas assises côte à côte</small>
+                    </div>
+                `;
+            } else {
+                statusInfo.innerHTML = `
+                    <div class="normal-info">
+                        ✅ <strong>Attribution normale</strong><br>
+                        <small>Les personnes seront assises ensemble</small>
+                    </div>
+                `;
+            }
             
             // Création de la liste des zones disponibles
             const zoneSelection = document.getElementById('zoneSelection');
@@ -487,8 +546,8 @@
                 zoneSelection.appendChild(div);
             });
             
-            // Affichage de la modale
-            document.getElementById('zoneModalOverlay').style.display = 'flex';
+            // Révaluer l'état du bouton
+            onZoneSelected();
         }
 
         function closeZoneModal() {
@@ -498,24 +557,44 @@
         }
 
         function onZoneSelected() {
-            document.getElementById('confirmZoneBtn').disabled = false;
+            const handlerName = document.getElementById('handlerName').value.trim();
+            const selectedZone = document.querySelector('input[name="selectedZone"]:checked');
+            
+            if (currentRequestForZone?.action === 'process-request' && !currentRequestForZone.targetStatus) {
+                // Mode traitement : juste vérifier le nom pour continuer vers le choix de zone
+                document.getElementById('confirmZoneBtn').disabled = !handlerName;
+            } else {
+                // Mode attribution : vérifier nom ET zone
+                document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedZone);
+            }
         }
 
         function confirmZoneAssignment() {
             if (!currentRequestForZone) return;
             
-            const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
-            if (!selectedZone) return;
+            const handlerName = document.getElementById('handlerName').value.trim();
+            if (!handlerName) return;
             
-            console.log('🎯 Attribution de zone:', currentRequestForZone.requestId, selectedZone);
-            
-            socket.emit('update_request_status', {
-                requestId: currentRequestForZone.requestId,
-                status: currentRequestForZone.targetStatus,
-                assignedZone: selectedZone
-            });
-            
-            closeZoneModal();
+            if (currentRequestForZone.action === 'process-request' && !currentRequestForZone.targetStatus) {
+                // Première étape : choix du type de traitement fait, on ne fait rien ici
+                // La fonction selectTreatment gère la suite
+                return;
+            } else {
+                // Attribution finale avec zone
+                const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
+                if (!selectedZone) return;
+                
+                console.log('🎯 Attribution finale:', currentRequestForZone.requestId, selectedZone, handlerName);
+                
+                socket.emit('update_request_status', {
+                    requestId: currentRequestForZone.requestId,
+                    status: currentRequestForZone.targetStatus,
+                    assignedZone: selectedZone,
+                    handledByName: handlerName
+                });
+                
+                closeZoneModal();
+            }
         }
 
         // ===========================================
@@ -539,28 +618,8 @@
         }
 
         function updateZonesSummary() {
-            const grid = document.getElementById('zonesGrid');
-            grid.innerHTML = '';
-            
-            Object.entries(zones).forEach(([zoneId, zone]) => {
-                const percentage = Math.round((zone.current / zone.max) * 100);
-                const div = document.createElement('div');
-                div.className = `zone-summary ${getZoneColorClass(percentage)}`;
-                div.innerHTML = `
-                    <div class="zone-name">${zone.name}</div>
-                    <div class="zone-count">${zone.current}/${zone.max}</div>
-                    <div class="zone-percentage">${percentage}%</div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-
-        function getZoneColorClass(percentage) {
-            if (percentage >= 75) return 'zone-green';
-            if (percentage >= 50) return 'zone-yellow';
-            if (percentage >= 25) return 'zone-orange';
-            if (percentage > 0) return 'zone-red';
-            return 'zone-gray';
+            const totalAvailable = Object.values(zones).reduce((sum, zone) => sum + zone.current, 0);
+            document.getElementById('totalAvailable').textContent = totalAvailable;
         }
 
         function filterRequests() {
@@ -592,6 +651,7 @@
         // INITIALISATION
         // ===========================================
 
+        // Également déclencher la validation quand on tape le nom
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Application des demandes initialisée');
             
@@ -599,6 +659,12 @@
             const randomNames = ['Alice Martin', 'Bob Dupont', 'Claire Bernard', 'David Moreau'];
             document.getElementById('userName').value = 
                 randomNames[Math.floor(Math.random() * randomNames.length)];
+            
+            // Ajouter l'écouteur pour le champ nom dans la modale
+            const handlerNameInput = document.getElementById('handlerName');
+            if (handlerNameInput) {
+                handlerNameInput.addEventListener('input', onZoneSelected);
+            }
         });
 
         // Gestion des erreurs globales
