@@ -1,0 +1,44 @@
+# Dépendances Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables d'environnement
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Fichiers de cache
+.cache/
+.tmp/
+.temp/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build et dist
+dist/
+build/
+
+# Coverage
+coverage/
+
+# PM2
+.pm2/
+
+# Railway
+.railway/

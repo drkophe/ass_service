@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Places - Visualisation Salle</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête avec navigation -->
+        <div class="header">
+            <h1>🎪 Visualisation de la Salle</h1>
+            <p>Organisation collaborative des places en temps réel</p>
+            
+            <div class="navigation">
+                <a href="/" class="nav-link">📋 Demandes</a>
+                <a href="/salle" class="nav-link active">🎪 Visualiser la salle</a>
+            </div>
+            
+            <div class="connection-status" id="connectionStatus">
+                🔴 Déconnexion...
+            </div>
+        </div>
+
+        <!-- Statistiques globales -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">Places totales :</span>
+                <span class="stat-value" id="totalPlaces">300</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Places disponibles :</span>
+                <span class="stat-value" id="availablePlaces">300</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Taux d'occupation :</span>
+                <span class="stat-value" id="occupancyRate">0%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Utilisateurs connectés :</span>
+                <span class="stat-value" id="connectedUsers">0</span>
+            </div>
+        </div>
+
+        <!-- Grille des 6 zones de la salle -->
+        <div class="room-layout">
+            <!-- Première rangée (Devant) -->
+            <div class="zone" data-zone="front-left" onclick="openControlPanel('front-left')">
+                <div class="zone-title">Devant Gauche</div>
+                <div class="zone-info" id="front-left-count">50</div>
+                <div class="zone-capacity">/ <span id="front-left-max">50</span> places</div>
+                <div class="zone-percentage" id="front-left-percentage">100%</div>
+                <div class="zone-requests" id="front-left-requests"></div>
+            </div>
+            
+            <div class="zone" data-zone="front-center" onclick="openControlPanel('front-center')">
+                <div class="zone-title">Devant Milieu</div>
+                <div class="zone-info" id="front-center-count">65</div>
+                <div class="zone-capacity">/ <span id="front-center-max">65</span> places</div>
+                <div class="zone-percentage" id="front-center-percentage">100%</div>
+                <div class="zone-requests" id="front-center-requests"></div>
+            </div>
+            
+            <div class="zone" data-zone="front-right" onclick="openControlPanel('front-right')">
+                <div class="zone-title">Devant Droite</div>
+                <div class="zone-info" id="front-right-count">50</div>
+                <div class="zone-capacity">/ <span id="front-right-max">50</span> places</div>
+                <div class="zone-percentage" id="front-right-percentage">100%</div>
+                <div class="zone-requests" id="front-right-requests"></div>
+            </div>
+
+            <!-- Deuxième rangée (Derrière) -->
+            <div class="zone" data-zone="back-left" onclick="openControlPanel('back-left')">
+                <div class="zone-title">Derrière Gauche</div>
+                <div class="zone-info" id="back-left-count">40</div>
+                <div class="zone-capacity">/ <span id="back-left-max">40</span> places</div>
+                <div class="zone-percentage" id="back-left-percentage">100%</div>
+                <div class="zone-requests" id="back-left-requests"></div>
+            </div>
+            
+            <div class="zone" data-zone="back-center" onclick="openControlPanel('back-center')">
+                <div class="zone-title">Derrière Milieu</div>
+                <div class="zone-info" id="back-center-count">55</div>
+                <div class="zone-capacity">/ <span id="back-center-max">55</span> places</div>
+                <div class="zone-percentage" id="back-center-percentage">100%</div>
+                <div class="zone-requests" id="back-center-requests"></div>
+            </div>
+            
+            <div class="zone" data-zone="back-right" onclick="openControlPanel('back-right')">
+                <div class="zone-title">Derrière Droite</div>
+                <div class="zone-info" id="back-right-count">40</div>
+                <div class="zone-capacity">/ <span id="back-right-max">40</span> places</div>
+                <div class="zone-percentage" id="back-right-percentage">100%</div>
+                <div class="zone-requests" id="back-right-requests"></div>
+            </div>
+        </div>
+
+        <!-- Légende des couleurs -->
+        <div class="legend">
+            <h3>📋 Légende</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color zone-green"></div>
+                    <span>75-100% disponible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color zone-yellow"></div>
+                    <span>50-74% disponible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color zone-orange"></div>
+                    <span>25-49% disponible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color zone-red"></div>
+                    <span>1-24% disponible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color zone-gray"></div>
+                    <span>Complet (0%)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay pour fermer le panneau de contrôle -->
+    <div class="overlay" id="overlay" onclick="closeControlPanel()"></div>
+
+    <!-- Panneau de contrôle pour modifier les places -->
+    <div class="control-panel" id="controlPanel">
+        <div class="control-header">
+            <h3 id="controlTitle">Zone Sélectionnée</h3>
+            <div class="current-count">
+                <span id="controlCurrentCount">0</span> / <span id="controlMaxCount">0</span> places
+            </div>
+        </div>
+        
+        <!-- Informations sur les demandes liées à cette zone -->
+        <div class="zone-requests-info" id="zoneRequestsInfo">
+            <!-- Les demandes liées seront affichées ici -->
+        </div>
+        
+        <div class="control-buttons">
+            <!-- Boutons de diminution -->
+            <button class="control-btn btn-decrease" onclick="updateZone(-10)">-10</button>
+            <button class="control-btn btn-decrease" onclick="updateZone(-5)">-5</button>
+            <button class="control-btn btn-decrease" onclick="updateZone(-1)">-1</button>
+            
+            <!-- Boutons d'augmentation -->
+            <button class="control-btn btn-increase" onclick="updateZone(+1)">+1</button>
+            <button class="control-btn btn-increase" onclick="updateZone(+5)">+5</button>
+            <button class="control-btn btn-increase" onclick="updateZone(+10)">+10</button>
+        </div>
+        
+        <div class="control-info">
+            <p>💡 <strong>Astuce :</strong> Utilisez les touches du clavier :</p>
+            <p>• <kbd>1</kbd> = +1 • <kbd>5</kbd> = +5 • <kbd>-</kbd> = -1 • <kbd>_</kbd> = -5</p>
+            <p>• <kbd>Échap</kbd> = Fermer</p>
+        </div>
+        
+        <button class="control-btn btn-close" onclick="closeControlPanel()">
+            ✖ Fermer
+        </button>
+    </div>
+
+    <!-- Zone de notifications -->
+    <div id="notifications"></div>
+
+    <script>
+        /**
+         * 🎪 APPLICATION DE VISUALISATION DE SALLE
+         * 
+         * Cette page permet de :
+         * 1. Visualiser l'état des 6 zones de la salle en temps réel
+         * 2. Modifier manuellement les places disponibles
+         * 3. Voir les demandes assignées à chaque zone
+         * 4. Synchroniser avec la page de gestion des demandes
+         */
+
+        // ===========================================
+        // CONFIGURATION ET VARIABLES GLOBALES
+        // ===========================================
+
+        const socket = io({
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 20000
+        });
+
+        let zones = {};
+        let requests = new Map();
+        let connectedUsers = 0;
+        let currentZone = null;
+
+        // ===========================================
+        // GESTION DES CONNEXIONS SOCKET.IO
+        // ===========================================
+
+        socket.on('connect', () => {
+            console.log('✅ Connecté au serveur');
+            updateConnectionStatus(true);
+            showNotification('Connexion établie avec succès!', 'success');
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Déconnexion:', reason);
+            updateConnectionStatus(false);
+            showNotification('Connexion perdue. Reconnexion en cours...', 'warning');
+        });
+
+        socket.on('reconnect', () => {
+            console.log('🔄 Reconnexion réussie');
+            updateConnectionStatus(true);
+            showNotification('Reconnexion réussie!', 'success');
+        });
+
+        // Réception des données initiales
+        socket.on('initial_data', (data) => {
+            console.log('📥 Données initiales reçues', data);
+            
+            // Mise à jour des zones
+            zones = data.zones;
+            
+            // Mise à jour des demandes
+            requests.clear();
+            data.requests.forEach(request => {
+                requests.set(request.id, request);
+            });
+            
+            // Mise à jour de l'interface
+            updateAllZonesDisplay();
+            updateStatsBar();
+            updateConnectedUsers(data.connectedUsers);
+        });
+
+        // Gestion des mises à jour de zones
+        socket.on('zone_updated', (data) => {
+            console.log('🔄 Zone mise à jour:', data);
+            
+            if (zones[data.zoneId]) {
+                zones[data.zoneId].current = data.current;
+                updateZoneDisplay(data.zoneId);
+                updateStatsBar();
+                
+                if (data.manual) {
+                    showNotification(`${zones[data.zoneId].name} mise à jour par ${data.updatedBy}`, 'info');
+                }
+            }
+        });
+
+        socket.on('zone_updated_from_request', (data) => {
+            console.log('🎯 Zone mise à jour suite à une demande:', data);
+            
+            if (zones[data.zoneId]) {
+                zones[data.zoneId].current = data.current;
+                updateZoneDisplay(data.zoneId);
+                updateStatsBar();
+                
+                showNotification(
+                    `${data.placesRemoved} places retirées de ${zones[data.zoneId].name} (demande acceptée)`, 
+                    'success'
+                );
+            }
+        });
+
+        // Gestion des demandes
+        socket.on('new_request', (request) => {
+            requests.set(request.id, request);
+            updateZoneRequestsDisplay();
+        });
+
+        socket.on('request_updated', (request) => {
+            requests.set(request.id, request);
+            updateZoneRequestsDisplay();
+        });
+
+        socket.on('request_deleted', (data) => {
+            requests.delete(data.requestId);
+            updateZoneRequestsDisplay();
+        });
+
+        socket.on('users_count', (count) => {
+            updateConnectedUsers(count);
+        });
+
+        socket.on('error', (error) => {
+            console.error('❌ Erreur serveur:', error);
+            showNotification(error.message || error, 'error');
+        });
+
+        socket.on('update_confirmed', (data) => {
+            console.log('✅ Mise à jour confirmée:', data);
+        });
+
+        // ===========================================
+        // GESTION DE L'INTERFACE UTILISATEUR
+        // ===========================================
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '🟢 Connecté';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = '🔴 Déconnecté';
+                status.className = 'connection-status disconnected';
+            }
+        }
+
+        function updateConnectedUsers(count) {
+            connectedUsers = count;
+            document.getElementById('connectedUsers').textContent = count;
+        }
+
+        function updateStatsBar() {
+            const totalPlaces = Object.values(zones).reduce((sum, zone) => sum + zone.max, 0);
+            const availablePlaces = Object.values(zones).reduce((sum, zone) => sum + zone.current, 0);
+            const occupancyRate = Math.round(((totalPlaces - availablePlaces) / totalPlaces) * 100);
+            
+            document.getElementById('totalPlaces').textContent = totalPlaces;
+            document.getElementById('availablePlaces').textContent = availablePlaces;
+            document.getElementById('occupancyRate').textContent = `${occupancyRate}%`;
+        }
+
+        function updateAllZonesDisplay() {
+            Object.keys(zones).forEach(zoneId => {
+                updateZoneDisplay(zoneId);
+            });
+            updateZoneRequestsDisplay();
+        }
+
+        function updateZoneDisplay(zoneId) {
+            const zone = zones[zoneId];
+            if (!zone) return;
+
+            const percentage = Math.round((zone.current / zone.max) * 100);
+            
+            // Mise à jour des éléments DOM
+            const countElement = document.getElementById(`${zoneId}-count`);
+            const maxElement = document.getElementById(`${zoneId}-max`);
+            const percentageElement = document.getElementById(`${zoneId}-percentage`);
+            const zoneElement = document.querySelector(`[data-zone="${zoneId}"]`);
+
+            if (countElement) countElement.textContent = zone.current;
+            if (maxElement) maxElement.textContent = zone.max;
+            if (percentageElement) percentageElement.textContent = `${percentage}%`;
+
+            // Application des couleurs selon le pourcentage
+            if (zoneElement) {
+                updateZoneColor(zoneElement, percentage, zone.current === 0);
+            }
+        }
+
+        function updateZoneColor(zoneElement, percentage, isEmpty) {
+            // Suppression des classes de couleur existantes
+            zoneElement.classList.remove('zone-green', 'zone-yellow', 'zone-orange', 'zone-red', 'zone-gray');
+            
+            if (isEmpty) {
+                zoneElement.classList.add('zone-gray');
+                zoneElement.style.pointerEvents = 'none';
+            } else {
+                zoneElement.style.pointerEvents = 'auto';
+                
+                if (percentage >= 75) {
+                    zoneElement.classList.add('zone-green');
+                } else if (percentage >= 50) {
+                    zoneElement.classList.add('zone-yellow');
+                } else if (percentage >= 25) {
+                    zoneElement.classList.add('zone-orange');
+                } else {
+                    zoneElement.classList.add('zone-red');
+                }
+            }
+        }
+
+        function updateZoneRequestsDisplay() {
+            Object.keys(zones).forEach(zoneId => {
+                const requestsElement = document.getElementById(`${zoneId}-requests`);
+                if (!requestsElement) return;
+                
+                // Trouver les demandes assignées à cette zone
+                const zoneRequests = Array.from(requests.values())
+                    .filter(request => request.assignedZone === zoneId && request.status === 'available')
+                    .slice(0, 2); // Limiter à 2 demandes affichées
+                
+                if (zoneRequests.length > 0) {
+                    requestsElement.innerHTML = zoneRequests.map(request => 
+                        `<div class="zone-request-badge">${request.userName} (${request.placesNeeded})</div>`
+                    ).join('');
+                } else {
+                    requestsElement.innerHTML = '';
+                }
+            });
+        }
+
+        // ===========================================
+        // GESTION DU PANNEAU DE CONTRÔLE
+        // ===========================================
+
+        function openControlPanel(zoneId) {
+            const zone = zones[zoneId];
+            if (!zone) return;
+
+            console.log(`🎛️ Ouverture du panneau pour: ${zoneId}`);
+            
+            currentZone = zoneId;
+            
+            // Mise à jour du contenu du panneau
+            document.getElementById('controlTitle').textContent = zone.name;
+            document.getElementById('controlCurrentCount').textContent = zone.current;
+            document.getElementById('controlMaxCount').textContent = zone.max;
+            
+            // Affichage des demandes liées à cette zone
+            updateZoneRequestsInfo(zoneId);
+            
+            // Affichage du panneau
+            document.getElementById('controlPanel').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeControlPanel() {
+            console.log('❌ Fermeture du panneau de contrôle');
+            
+            document.getElementById('controlPanel').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            
+            currentZone = null;
+        }
+
+        function updateZoneRequestsInfo(zoneId) {
+            const infoElement = document.getElementById('zoneRequestsInfo');
+            const zoneRequests = Array.from(requests.values())
+                .filter(request => request.assignedZone === zoneId);
+            
+            if (zoneRequests.length > 0) {
+                infoElement.innerHTML = `
+                    <h4>📋 Demandes assignées à cette zone :</h4>
+                    <div class="zone-requests-list">
+                        ${zoneRequests.map(request => `
+                            <div class="zone-request-item status-${request.status}">
+                                <strong>${request.userName}</strong> - ${request.placesNeeded} place(s)
+                                <span class="request-status">${getStatusText(request.status)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                infoElement.innerHTML = `
+                    <div class="no-requests">
+                        <p>📭 Aucune demande assignée à cette zone</p>
+                    </div>
+                `;
+            }
+        }
+
+        function getStatusText(status) {
+            const statusTexts = {
+                'pending': '⏳ En attente',
+                'in-progress': '🔄 En cours',
+                'available': '✅ Attribuée',
+                'not-available': '❌ Non disponible',
+                'available-separated': '⚠️ Séparée'
+            };
+            return statusTexts[status] || status;
+        }
+
+        // ===========================================
+        // GESTION DES MISES À JOUR DES ZONES
+        // ===========================================
+
+        function updateZone(delta) {
+            if (!currentZone || !socket || !socket.connected) {
+                console.warn('⚠️ Impossible de mettre à jour: zone ou connexion non disponible');
+                showNotification('Impossible de mettre à jour: pas de connexion', 'warning');
+                return;
+            }
+
+            const zone = zones[currentZone];
+            if (!zone) return;
+
+            const newValue = zone.current + delta;
+            
+            // Validation des limites
+            if (newValue < 0 || newValue > zone.max) {
+                console.warn(`⚠️ Valeur ${newValue} hors limites pour ${currentZone} (0-${zone.max})`);
+                showErrorFeedback();
+                showNotification(`Valeur hors limites (0-${zone.max})`, 'warning');
+                return;
+            }
+
+            console.log(`📤 Envoi mise à jour: ${currentZone} = ${newValue} (${delta > 0 ? '+' : ''}${delta})`);
+            
+            // Envoi au serveur
+            socket.emit('update_zone', {
+                zoneId: currentZone,
+                newValue: newValue,
+                delta: delta
+            });
+
+            // Mise à jour optimiste de l'interface
+            zone.current = newValue;
+            updateZoneDisplay(currentZone);
+            updateStatsBar();
+            
+            // Mise à jour du panneau
+            document.getElementById('controlCurrentCount').textContent = newValue;
+            
+            // Fermeture automatique si zone vide
+            if (newValue === 0) {
+                setTimeout(closeControlPanel, 500);
+            }
+        }
+
+        function showErrorFeedback() {
+            const controlPanel = document.getElementById('controlPanel');
+            controlPanel.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => controlPanel.style.animation = '', 500);
+        }
+
+        // ===========================================
+        // GESTION DES ÉVÉNEMENTS CLAVIER
+        // ===========================================
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && currentZone) {
+                closeControlPanel();
+            }
+            
+            if (currentZone && socket && socket.connected) {
+                switch (event.key) {
+                    case '1': updateZone(1); break;
+                    case '5': updateZone(5); break;
+                    case '-': updateZone(-1); break;
+                    case '_': updateZone(-5); break;
+                }
+            }
+        });
+
+        // ===========================================
+        // FONCTIONS UTILITAIRES
+        // ===========================================
+
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.getElementById('notifications').appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // ===========================================
+        // ANIMATIONS CSS ADDITIONNELLES
+        // ===========================================
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translate(-50%, -50%); }
+                25% { transform: translate(-52%, -50%); }
+                75% { transform: translate(-48%, -50%); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ===========================================
+        // INITIALISATION
+        // ===========================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Application de visualisation de salle initialisée');
+        });
+
+        // Gestion de la fermeture de la page
+        window.addEventListener('beforeunload', () => {
+            if (socket) socket.disconnect();
+        });
+
+        // Gestion des erreurs globales
+        window.addEventListener('error', (event) => {
+            console.error('❌ Erreur JavaScript:', event.error);
+            showNotification('Une erreur inattendue s\'est produite', 'error');
+        });
+    </script>
+</body>
+</html>

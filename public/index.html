@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Places - Demandes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête avec navigation -->
+        <div class="header">
+            <h1>📋 Gestion des Demandes</h1>
+            <p>Créez et gérez les demandes de places en temps réel</p>
+            
+            <div class="navigation">
+                <a href="/" class="nav-link active">📋 Demandes</a>
+                <a href="/salle" class="nav-link">🎪 Visualiser la salle</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Section pour faire une demande de place -->
+            <div class="section request-section">
+                <div class="section-header">
+                    <h2 class="section-title">Faire une demande</h2>
+                    
+                    <div class="connection-info">
+                        <div class="connection-status" id="connectionStatus">
+                            🔴 Déconnexion...
+                        </div>
+                        <div class="connected-users">
+                            <span id="connectedCount">0</span> utilisateur(s) connecté(s)
+                        </div>
+                    </div>
+                </div>
+
+                <form id="requestForm" class="request-form">
+                    <div class="form-group">
+                        <label for="userName">Votre nom *</label>
+                        <input type="text" id="userName" required placeholder="Entrez votre nom">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placesNeeded">Nombre de places nécessaires *</label>
+                        <input type="number" id="placesNeeded" min="1" max="20" required placeholder="Ex: 4">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority">Priorité *</label>
+                        <select id="priority" required>
+                            <option value="">Sélectionnez la priorité</option>
+                            <option value="low">🟢 Basse</option>
+                            <option value="medium">🟡 Moyenne</option>
+                            <option value="high">🟠 Haute</option>
+                            <option value="urgent">🔴 Urgente</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="comment">Commentaire (optionnel)</label>
+                        <textarea id="comment" placeholder="Informations supplémentaires..." rows="2"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        ➕ Créer la demande
+                    </button>
+                </form>
+
+                <!-- Résumé des places disponibles -->
+                <div class="zones-summary" id="zonesSummary">
+                    <h3>📊 Places disponibles par zone</h3>
+                    <div class="zones-grid" id="zonesGrid">
+                        <!-- Les zones seront ajoutées dynamiquement -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section pour gérer les demandes -->
+            <div class="section management-section">
+                <h2 class="section-title">📨 Demandes en cours</h2>
+                
+                <div class="filters">
+                    <select id="statusFilter" onchange="filterRequests()">
+                        <option value="all">Tous les statuts</option>
+                        <option value="pending">En attente</option>
+                        <option value="in-progress">En cours</option>
+                        <option value="available">Disponible</option>
+                        <option value="not-available">Non disponible</option>
+                        <option value="available-separated">Disponible séparé</option>
+                    </select>
+                </div>
+                
+                <div class="requests-list" id="requestsList">
+                    <div class="empty-state">
+                        <p>📭 Aucune demande en cours...</p>
+                        <p>Les nouvelles demandes apparaîtront ici automatiquement</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale pour assigner une zone -->
+    <div class="modal-overlay" id="zoneModalOverlay" onclick="closeZoneModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>🎯 Assigner une zone</h3>
+                <button class="btn-close" onclick="closeZoneModal()">✖</button>
+            </div>
+            <div class="modal-body">
+                <p>Sélectionnez la zone pour cette demande :</p>
+                <div class="zone-selection" id="zoneSelection">
+                    <!-- Les zones disponibles seront ajoutées dynamiquement -->
+                </div>
+                <div class="modal-info">
+                    <strong>Demande :</strong> <span id="modalRequestInfo"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeZoneModal()">Annuler</button>
+                <button class="btn btn-success" onclick="confirmZoneAssignment()" id="confirmZoneBtn" disabled>
+                    ✅ Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone de notifications -->
+    <div id="notifications"></div>
+
+    <script>
+        /**
+         * 🎯 APPLICATION DE GESTION DES DEMANDES
+         * 
+         * Cette page permet de :
+         * 1. Créer des demandes de places
+         * 2. Traiter les demandes (accepter/refuser avec assignation de zone)
+         * 3. Visualiser l'état des zones en temps réel
+         * 4. Communiquer avec la page de visualisation de salle
+         */
+
+        // ===========================================
+        // CONFIGURATION ET VARIABLES GLOBALES
+        // ===========================================
+
+        const socket = io({
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 20000
+        });
+
+        let currentRequests = new Map();
+        let zones = {};
+        let connectedUsers = 0;
+        let currentRequestForZone = null; // Pour la modale d'assignation
+
+        // ===========================================
+        // GESTION DES CONNEXIONS SOCKET.IO
+        // ===========================================
+
+        socket.on('connect', () => {
+            console.log('✅ Connecté au serveur');
+            updateConnectionStatus(true);
+            showNotification('Connexion établie avec succès!', 'success');
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Déconnexion:', reason);
+            updateConnectionStatus(false);
+            showNotification('Connexion perdue. Reconnexion en cours...', 'warning');
+        });
+
+        socket.on('reconnect', () => {
+            console.log('🔄 Reconnexion réussie');
+            updateConnectionStatus(true);
+            showNotification('Reconnexion réussie!', 'success');
+        });
+
+        // Réception des données initiales
+        socket.on('initial_data', (data) => {
+            console.log('📥 Données initiales reçues', data);
+            
+            // Mise à jour des demandes
+            currentRequests.clear();
+            data.requests.forEach(request => {
+                currentRequests.set(request.id, request);
+            });
+            
+            // Mise à jour des zones
+            zones = data.zones;
+            
+            // Mise à jour de l'interface
+            updateRequestsList();
+            updateZonesSummary();
+            updateConnectedUsers(data.connectedUsers);
+        });
+
+        // Gestion des événements de demandes
+        socket.on('new_request', (request) => {
+            console.log('📨 Nouvelle demande:', request);
+            currentRequests.set(request.id, request);
+            addRequestToList(request);
+            showNotification(`Nouvelle demande de ${request.userName} pour ${request.placesNeeded} place(s)`, 'info');
+        });
+
+        socket.on('request_updated', (request) => {
+            console.log('🔄 Demande mise à jour:', request);
+            currentRequests.set(request.id, request);
+            updateRequestInList(request);
+            
+            const statusMessages = {
+                'in-progress': '⏳ Demande prise en charge',
+                'available': '✅ Places attribuées',
+                'not-available': '❌ Places non disponibles',
+                'available-separated': '⚠️ Places disponibles mais séparées'
+            };
+            
+            if (statusMessages[request.status]) {
+                showNotification(statusMessages[request.status], 'info');
+            }
+        });
+
+        socket.on('request_deleted', (data) => {
+            currentRequests.delete(data.requestId);
+            const element = document.querySelector(`[data-request-id="${data.requestId}"]`);
+            if (element) element.remove();
+            showNotification('Demande supprimée', 'info');
+        });
+
+        // Gestion des mises à jour de zones
+        socket.on('zone_updated', (data) => {
+            if (zones[data.zoneId]) {
+                zones[data.zoneId].current = data.current;
+                updateZonesSummary();
+                
+                if (data.manual) {
+                    showNotification(`Zone ${zones[data.zoneId].name} mise à jour manuellement`, 'info');
+                }
+            }
+        });
+
+        socket.on('zone_updated_from_request', (data) => {
+            if (zones[data.zoneId]) {
+                zones[data.zoneId].current = data.current;
+                updateZonesSummary();
+                showNotification(`${data.placesRemoved} places retirées de ${zones[data.zoneId].name}`, 'success');
+            }
+        });
+
+        socket.on('users_count', (count) => {
+            updateConnectedUsers(count);
+        });
+
+        socket.on('error', (error) => {
+            console.error('❌ Erreur serveur:', error);
+            showNotification(error, 'error');
+        });
+
+        // ===========================================
+        // GESTION DU FORMULAIRE DE DEMANDE
+        // ===========================================
+
+        document.getElementById('requestForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                userName: document.getElementById('userName').value.trim(),
+                placesNeeded: parseInt(document.getElementById('placesNeeded').value),
+                priority: document.getElementById('priority').value,
+                comment: document.getElementById('comment').value.trim()
+            };
+            
+            // Validation
+            if (!formData.userName || !formData.placesNeeded || !formData.priority) {
+                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+                return;
+            }
+            
+            if (formData.placesNeeded < 1 || formData.placesNeeded > 20) {
+                showNotification('Le nombre de places doit être entre 1 et 20', 'warning');
+                return;
+            }
+            
+            console.log('📤 Envoi de la demande:', formData);
+            socket.emit('create_request', formData);
+            
+            // Reset du formulaire
+            e.target.reset();
+            showNotification('Demande envoyée avec succès!', 'success');
+        });
+
+        // ===========================================
+        // GESTION DES DEMANDES
+        // ===========================================
+
+        function updateRequestsList() {
+            const requestsList = document.getElementById('requestsList');
+            requestsList.innerHTML = '';
+            
+            if (currentRequests.size === 0) {
+                requestsList.innerHTML = `
+                    <div class="empty-state">
+                        <p>📭 Aucune demande en cours...</p>
+                        <p>Les nouvelles demandes apparaîtront ici automatiquement</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Tri par timestamp (plus récentes d'abord)
+            const sortedRequests = Array.from(currentRequests.values())
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            sortedRequests.forEach(request => {
+                addRequestToList(request);
+            });
+        }
+
+        function addRequestToList(request) {
+            const requestsList = document.getElementById('requestsList');
+            const emptyState = requestsList.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            
+            const requestElement = createRequestElement(request);
+            requestsList.appendChild(requestElement);
+        }
+
+        function updateRequestInList(request) {
+            const existing = document.querySelector(`[data-request-id="${request.id}"]`);
+            if (existing) {
+                const newElement = createRequestElement(request);
+                existing.parentNode.replaceChild(newElement, existing);
+            } else {
+                addRequestToList(request);
+            }
+        }
+
+        function createRequestElement(request) {
+            const div = document.createElement('div');
+            div.className = `request-card ${request.status}`;
+            div.setAttribute('data-request-id', request.id);
+            
+            const date = new Date(request.timestamp);
+            const formattedDate = date.toLocaleString('fr-FR', {
+                hour: "2-digit",
+                minute: "2-digit",
+                day: "2-digit",
+                month: "2-digit"
+            });
+            
+            const priorityEmojis = {
+                'low': '🟢',
+                'medium': '🟡', 
+                'high': '🟠',
+                'urgent': '🔴'
+            };
+            
+            const statusTexts = {
+                'pending': 'En attente',
+                'in-progress': 'En cours de traitement',
+                'available': 'Places attribuées',
+                'not-available': 'Non disponible',
+                'available-separated': 'Disponible séparé'
+            };
+
+            div.innerHTML = `
+                <div class="request-header">
+                    <div class="request-places">
+                        <span class="places-count">${request.placesNeeded}</span>
+                        <span class="places-label">place(s)</span>
+                    </div>
+                    <div class="status-badge status-${request.status}">
+                        ${statusTexts[request.status]}
+                    </div>
+                </div>
+
+                <div class="request-body">
+                    <div class="request-info">
+                        <div class="info-item">
+                            <span class="icon">👤</span>
+                            <strong>${request.userName}</strong>
+                        </div>
+                        <div class="info-item">
+                            <span class="icon">🕐</span>
+                            ${formattedDate}
+                        </div>
+                        <div class="info-item">
+                            <span class="icon">${priorityEmojis[request.priority]}</span>
+                            Priorité ${request.priority}
+                        </div>
+                        ${request.comment ? `
+                            <div class="info-item">
+                                <span class="icon">💬</span>
+                                ${request.comment}
+                            </div>
+                        ` : ''}
+                        ${request.assignedZone ? `
+                            <div class="info-item">
+                                <span class="icon">📍</span>
+                                Zone: ${zones[request.assignedZone]?.name || request.assignedZone}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${request.status === 'pending' ? `
+                        <div class="request-actions">
+                            <button class="btn btn-warning" onclick="takeInCharge('${request.id}')">
+                                ⏳ Prendre en charge
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    ${request.status === 'in-progress' ? `
+                        <div class="request-actions">
+                            <button class="btn btn-success" onclick="openZoneModal('${request.id}', 'available')">
+                                ✅ Attribuer des places
+                            </button>
+                            <button class="btn btn-danger" onclick="updateRequestStatus('${request.id}', 'not-available')">
+                                ❌ Non disponible
+                            </button>
+                            <button class="btn btn-warning" onclick="updateRequestStatus('${request.id}', 'available-separated')">
+                                ⚠️ Places séparées
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // ===========================================
+        // ACTIONS SUR LES DEMANDES
+        // ===========================================
+
+        function takeInCharge(requestId) {
+            console.log('⏳ Prise en charge de la demande:', requestId);
+            socket.emit('update_request_status', {
+                requestId: requestId,
+                status: 'in-progress'
+            });
+        }
+
+        function updateRequestStatus(requestId, status) {
+            console.log('🔄 Mise à jour statut:', requestId, status);
+            socket.emit('update_request_status', {
+                requestId: requestId,
+                status: status
+            });
+        }
+
+        // ===========================================
+        // GESTION DE LA MODALE D'ASSIGNATION DE ZONE
+        // ===========================================
+
+        function openZoneModal(requestId, targetStatus) {
+            const request = currentRequests.get(requestId);
+            if (!request) return;
+            
+            currentRequestForZone = { requestId, targetStatus };
+            
+            // Mise à jour du contenu de la modale
+            document.getElementById('modalRequestInfo').textContent = 
+                `${request.userName} - ${request.placesNeeded} place(s)`;
+            
+            // Création de la liste des zones disponibles
+            const zoneSelection = document.getElementById('zoneSelection');
+            zoneSelection.innerHTML = '';
+            
+            Object.entries(zones).forEach(([zoneId, zone]) => {
+                const available = zone.current >= request.placesNeeded;
+                const div = document.createElement('div');
+                div.className = `zone-option ${available ? 'available' : 'unavailable'}`;
+                div.innerHTML = `
+                    <input type="radio" name="selectedZone" value="${zoneId}" 
+                           id="zone-${zoneId}" ${available ? '' : 'disabled'}
+                           onchange="onZoneSelected()">
+                    <label for="zone-${zoneId}">
+                        <strong>${zone.name}</strong>
+                        <span class="zone-capacity">${zone.current}/${zone.max} places</span>
+                        ${available ? '✅' : '❌'}
+                    </label>
+                `;
+                zoneSelection.appendChild(div);
+            });
+            
+            // Affichage de la modale
+            document.getElementById('zoneModalOverlay').style.display = 'flex';
+        }
+
+        function closeZoneModal() {
+            document.getElementById('zoneModalOverlay').style.display = 'none';
+            currentRequestForZone = null;
+            document.getElementById('confirmZoneBtn').disabled = true;
+        }
+
+        function onZoneSelected() {
+            document.getElementById('confirmZoneBtn').disabled = false;
+        }
+
+        function confirmZoneAssignment() {
+            if (!currentRequestForZone) return;
+            
+            const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
+            if (!selectedZone) return;
+            
+            console.log('🎯 Attribution de zone:', currentRequestForZone.requestId, selectedZone);
+            
+            socket.emit('update_request_status', {
+                requestId: currentRequestForZone.requestId,
+                status: currentRequestForZone.targetStatus,
+                assignedZone: selectedZone
+            });
+            
+            closeZoneModal();
+        }
+
+        // ===========================================
+        // GESTION DE L'INTERFACE
+        // ===========================================
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '🟢 Connecté';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = '🔴 Déconnecté';
+                status.className = 'connection-status disconnected';
+            }
+        }
+
+        function updateConnectedUsers(count) {
+            connectedUsers = count;
+            document.getElementById('connectedCount').textContent = count;
+        }
+
+        function updateZonesSummary() {
+            const grid = document.getElementById('zonesGrid');
+            grid.innerHTML = '';
+            
+            Object.entries(zones).forEach(([zoneId, zone]) => {
+                const percentage = Math.round((zone.current / zone.max) * 100);
+                const div = document.createElement('div');
+                div.className = `zone-summary ${getZoneColorClass(percentage)}`;
+                div.innerHTML = `
+                    <div class="zone-name">${zone.name}</div>
+                    <div class="zone-count">${zone.current}/${zone.max}</div>
+                    <div class="zone-percentage">${percentage}%</div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function getZoneColorClass(percentage) {
+            if (percentage >= 75) return 'zone-green';
+            if (percentage >= 50) return 'zone-yellow';
+            if (percentage >= 25) return 'zone-orange';
+            if (percentage > 0) return 'zone-red';
+            return 'zone-gray';
+        }
+
+        function filterRequests() {
+            const filter = document.getElementById('statusFilter').value;
+            const cards = document.querySelectorAll('.request-card');
+            
+            cards.forEach(card => {
+                const status = card.classList[1]; // ex: "pending"
+                card.style.display = (filter === 'all' || status === filter) ? 'block' : 'none';
+            });
+        }
+
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.getElementById('notifications').appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // ===========================================
+        // INITIALISATION
+        // ===========================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Application des demandes initialisée');
+            
+            // Pré-remplissage pour les tests
+            const randomNames = ['Alice Martin', 'Bob Dupont', 'Claire Bernard', 'David Moreau'];
+            document.getElementById('userName').value = 
+                randomNames[Math.floor(Math.random() * randomNames.length)];
+        });
+
+        // Gestion des erreurs globales
+        window.addEventListener('error', (event) => {
+            console.error('❌ Erreur JavaScript:', event.error);
+            showNotification('Une erreur inattendue s\'est produite', 'error');
+        });
+    </script>
+</body>
+</html>
