@@ -1,11 +1,7 @@
 /**
  * SERVEUR UNIFIÉ - GESTION DES PLACES ET DEMANDES
  * 
- * Ce serveur combine :
- * 1. La gestion des demandes de places (créer, traiter, supprimer)
- * 2. La visualisation en temps réel des zones de la salle
- * 3. La communication entre les deux systèmes
- * 
+ * Version optimisée mobile sans notifications
  * Configuration Render compatible pour déploiement gratuit
  */
 
@@ -27,38 +23,29 @@ const io = socketIo(server, {
     cors: {
         origin: process.env.NODE_ENV === 'production' 
             ? [
-                /\.onrender\.com$/,  // Permet tous les sous-domaines Render
+                /\.onrender\.com$/,
                 "https://your-app-name.onrender.com" // Remplacez par votre URL Render
               ]
-            : "*", // En développement, autorise tout
+            : "*",
         methods: ["GET", "POST"],
         credentials: true
     },
     transports: ['websocket', 'polling'],
-    allowEIO3: true // Compatibilité étendue
+    allowEIO3: true
 });
 
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuration du port pour Render
-const PORT = process.env.PORT || 10000; // Render utilise souvent le port 10000
+const PORT = process.env.PORT || 10000;
 
 // ===========================================
 // DONNÉES GLOBALES PARTAGÉES
 // ===========================================
 
-/**
- * Stockage des demandes de places
- * Chaque demande a un ID unique et un statut
- */
 let requests = new Map();
 
-/**
- * État des 10 zones de la salle
- * Ces données sont synchronisées avec les demandes acceptées
- */
 let zones = {
     'zone-d': { current: 122, max: 122, name: 'Zone D' },
     'zone-c': { current: 160, max: 160, name: 'Zone C' },
@@ -72,9 +59,6 @@ let zones = {
     'zone-l': { current: 109, max: 109, name: 'Zone L (Salle secondaire)' }
 };
 
-/**
- * Suivi des utilisateurs connectés
- */
 let connectedUsers = 0;
 let userCounter = 0;
 
@@ -82,17 +66,14 @@ let userCounter = 0;
 // ROUTES EXPRESS
 // ===========================================
 
-// Page principale : Gestion des demandes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Page salle : Visualisation des zones
 app.get('/salle', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'salle.html'));
 });
 
-// API pour récupérer l'état global (utilisé par Render pour le health check)
 app.get('/api/status', (req, res) => {
     res.json({
         status: 'healthy',
@@ -104,12 +85,10 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Route de santé simple pour Render
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// API pour réinitialiser (développement uniquement)
 app.post('/api/reset', (req, res) => {
     if (process.env.NODE_ENV === 'production') {
         return res.status(403).json({ error: 'Non autorisé en production' });
@@ -117,10 +96,8 @@ app.post('/api/reset', (req, res) => {
     
     console.log('🔄 Réinitialisation complète demandée');
     
-    // Reset des demandes
     requests.clear();
     
-    // Reset des zones
     zones = {
         'zone-d': { current: 122, max: 122, name: 'Zone D' },
         'zone-c': { current: 160, max: 160, name: 'Zone C' },
@@ -134,7 +111,6 @@ app.post('/api/reset', (req, res) => {
         'zone-l': { current: 109, max: 109, name: 'Zone L (Salle secondaire)' }
     };
     
-    // Notification de tous les clients
     io.emit('full_reset', { requests: [], zones: zones });
     
     res.json({ success: true, message: 'Système réinitialisé' });
@@ -144,10 +120,6 @@ app.post('/api/reset', (req, res) => {
 // FONCTIONS UTILITAIRES
 // ===========================================
 
-/**
- * Met à jour automatiquement les places d'une zone
- * Appelée quand une demande est acceptée
- */
 function updateZonePlaces(zoneId, placesToRemove, requestId) {
     if (!zones[zoneId]) {
         console.error(`❌ Zone ${zoneId} introuvable`);
@@ -161,7 +133,6 @@ function updateZonePlaces(zoneId, placesToRemove, requestId) {
     
     zone.current = newValue;
     
-    // Notification des clients sur les deux pages
     io.emit('zone_updated_from_request', {
         zoneId: zoneId,
         current: newValue,
@@ -174,23 +145,16 @@ function updateZonePlaces(zoneId, placesToRemove, requestId) {
     return true;
 }
 
-/**
- * Vérifie si assez de places sont disponibles dans une zone
- */
 function checkZoneAvailability(zoneId, placesNeeded) {
     const zone = zones[zoneId];
     if (!zone) return false;
     return zone.current >= placesNeeded;
 }
 
-/**
- * Trouve la meilleure zone disponible pour un nombre de places
- */
 function findBestAvailableZone(placesNeeded) {
     const availableZones = Object.entries(zones)
         .filter(([_, zone]) => zone.current >= placesNeeded)
         .sort((a, b) => {
-            // Priorité aux zones avec moins de places (optimisation)
             return a[1].current - b[1].current;
         });
     
@@ -207,32 +171,25 @@ io.on('connection', (socket) => {
     
     console.log(`🟢 ${userId} connecté (${socket.id}) - Total: ${connectedUsers}`);
     
-    // Envoi de l'état initial au nouveau client
     socket.emit('initial_data', {
         requests: Array.from(requests.values()),
         zones: zones,
         connectedUsers: connectedUsers
     });
     
-    // Notification de tous les clients du nombre d'utilisateurs
     io.emit('users_count', connectedUsers);
     
     // ===========================================
-    // GESTION DES DEMANDES (Page principale)
+    // GESTION DES DEMANDES
     // ===========================================
     
-    /**
-     * Création d'une nouvelle demande de place
-     */
     socket.on('create_request', (requestData) => {
         try {
-            // Validation des données
             if (!requestData.userName || !requestData.placesNeeded) {
                 socket.emit('error', 'Données de demande invalides');
                 return;
             }
             
-            // Création de la demande
             const request = {
                 id: uuidv4(),
                 userName: requestData.userName.trim(),
@@ -242,22 +199,19 @@ io.on('connection', (socket) => {
                 timestamp: new Date().toISOString(),
                 createdBy: socket.id,
                 handledBy: null,
-                handledByName: null, // Nom de la personne qui traite
-                assignedZone: null // Nouvelle propriété pour la zone assignée
+                handledByName: null,
+                assignedZone: null
             };
             
-            // Validation du nombre de places
             if (request.placesNeeded < 1 || request.placesNeeded > 20) {
                 socket.emit('error', 'Nombre de places invalide (1-20)');
                 return;
             }
             
-            // Stockage de la demande
             requests.set(request.id, request);
             
             console.log(`📨 Nouvelle demande: ${request.userName} - ${request.placesNeeded} places`);
             
-            // Diffusion à tous les clients
             io.emit('new_request', request);
             socket.emit('request_created', { success: true, requestId: request.id });
             
@@ -267,10 +221,6 @@ io.on('connection', (socket) => {
         }
     });
     
-    /**
-     * Mise à jour du statut d'une demande
-     * Gère automatiquement les places quand une demande est acceptée
-     */
     socket.on('update_request_status', (updateData) => {
         try {
             const { requestId, status, handledBy, handledByName, assignedZone } = updateData;
@@ -282,10 +232,9 @@ io.on('connection', (socket) => {
             
             const request = requests.get(requestId);
             
-            // Validation des transitions de statut
             const validTransitions = {
                 'pending': ['in-progress'],
-                'in-progress': ['available', 'available-separated'], // Plus de retour en pending
+                'in-progress': ['available', 'available-separated', 'pending'], // Permettre le retour à pending
                 'available': [],
                 'available-separated': []
             };
@@ -295,14 +244,12 @@ io.on('connection', (socket) => {
                 return;
             }
             
-            // Mise à jour de la demande
             const oldStatus = request.status;
             request.status = status;
             request.handledBy = handledBy || socket.id;
             request.handledByName = handledByName || 'Utilisateur anonyme';
             request.lastUpdated = new Date().toISOString();
             
-            // Gestion automatique des places pour acceptation (normale ou séparée)
             if ((status === 'available' || status === 'available-separated') && assignedZone) {
                 if (checkZoneAvailability(assignedZone, request.placesNeeded)) {
                     request.assignedZone = assignedZone;
@@ -314,7 +261,6 @@ io.on('connection', (socket) => {
                     return;
                 }
             } else if ((status === 'available' || status === 'available-separated') && !assignedZone) {
-                // Auto-assignation de zone si pas spécifiée
                 const bestZone = findBestAvailableZone(request.placesNeeded);
                 if (bestZone) {
                     request.assignedZone = bestZone;
@@ -330,7 +276,6 @@ io.on('connection', (socket) => {
             
             console.log(`🔄 Demande ${requestId}: ${oldStatus} → ${status}`);
             
-            // Diffusion de la mise à jour
             io.emit('request_updated', request);
             socket.emit('status_updated', { success: true, requestId, status });
             
@@ -341,8 +286,51 @@ io.on('connection', (socket) => {
     });
     
     /**
-     * Suppression d'une demande
+     * Abandon d'une demande en cours de traitement
      */
+    socket.on('abandon_request', (data) => {
+        try {
+            const { requestId } = data;
+            
+            if (!requests.has(requestId)) {
+                socket.emit('error', 'Demande introuvable');
+                return;
+            }
+            
+            const request = requests.get(requestId);
+            
+            // Vérifier que la demande est bien en cours et traitée par cet utilisateur
+            if (request.status !== 'in-progress') {
+                socket.emit('error', 'Cette demande n\'est pas en cours de traitement');
+                return;
+            }
+            
+            if (request.handledBy !== socket.id) {
+                socket.emit('error', 'Vous ne pouvez abandonner que vos propres traitements');
+                return;
+            }
+            
+            // Remettre la demande en attente
+            request.status = 'pending';
+            request.handledBy = null;
+            request.handledByName = null;
+            request.lastUpdated = new Date().toISOString();
+            
+            requests.set(requestId, request);
+            
+            console.log(`↩️ Demande ${requestId} abandonnée et remise en attente`);
+            
+            // Notifier tous les clients
+            io.emit('request_abandoned', { requestId });
+            io.emit('request_updated', request);
+            socket.emit('abandon_confirmed', { success: true, requestId });
+            
+        } catch (error) {
+            console.error('❌ Erreur abandon demande:', error);
+            socket.emit('error', 'Erreur lors de l\'abandon');
+        }
+    });
+    
     socket.on('delete_request', (requestId) => {
         try {
             if (!requests.has(requestId)) {
@@ -352,7 +340,6 @@ io.on('connection', (socket) => {
             
             const request = requests.get(requestId);
             
-            // Seul le créateur peut supprimer
             if (request.createdBy !== socket.id) {
                 socket.emit('error', 'Vous ne pouvez supprimer que vos propres demandes');
                 return;
@@ -370,19 +357,13 @@ io.on('connection', (socket) => {
     });
     
     // ===========================================
-    // GESTION DES ZONES (Page salle)
+    // GESTION DES ZONES
     // ===========================================
     
-    /**
-     * Demande des données des zones
-     */
     socket.on('request_zones_data', () => {
         socket.emit('zones_data', zones);
     });
     
-    /**
-     * Mise à jour manuelle d'une zone depuis la page salle
-     */
     socket.on('update_zone', (data) => {
         try {
             const { zoneId, newValue, delta } = data;
@@ -394,7 +375,6 @@ io.on('connection', (socket) => {
             
             const zone = zones[zoneId];
             
-            // Validation des limites
             if (newValue < 0 || newValue > zone.max) {
                 socket.emit('error', { 
                     message: `Valeur ${newValue} hors limites pour ${zone.name} (0-${zone.max})`
@@ -407,14 +387,13 @@ io.on('connection', (socket) => {
             
             console.log(`🎛️ Mise à jour manuelle ${zone.name}: ${oldValue} → ${newValue} (${delta > 0 ? '+' : ''}${delta})`);
             
-            // Notification de tous les clients
             io.emit('zone_updated', {
                 zoneId: zoneId,
                 current: newValue,
                 previous: oldValue,
                 delta: delta,
                 updatedBy: userId,
-                manual: true, // Indique que c'est une modification manuelle
+                manual: true,
                 timestamp: new Date().toISOString()
             });
             
@@ -436,7 +415,6 @@ io.on('connection', (socket) => {
         
         io.emit('users_count', connectedUsers);
         
-        // Remettre en attente les demandes "en cours" de cet utilisateur
         for (let [id, request] of requests) {
             if (request.handledBy === socket.id && request.status === 'in-progress') {
                 request.status = 'pending';
@@ -458,9 +436,6 @@ io.on('connection', (socket) => {
 // TÂCHES DE MAINTENANCE
 // ===========================================
 
-/**
- * Nettoyage périodique des anciennes demandes
- */
 setInterval(() => {
     const now = new Date();
     const maxAge = 24 * 60 * 60 * 1000; // 24 heures
@@ -473,11 +448,8 @@ setInterval(() => {
             io.emit('request_deleted', { requestId: id });
         }
     }
-}, 60 * 60 * 1000); // Vérification toutes les heures
+}, 60 * 60 * 1000);
 
-/**
- * Sauvegarde périodique des statistiques
- */
 setInterval(() => {
     const stats = {
         timestamp: new Date().toISOString(),
@@ -488,7 +460,7 @@ setInterval(() => {
     };
     
     console.log('📊 Stats:', stats);
-}, 5 * 60 * 1000); // Toutes les 5 minutes
+}, 5 * 60 * 1000);
 
 // ===========================================
 // DÉMARRAGE DU SERVEUR
@@ -496,7 +468,7 @@ setInterval(() => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log('🚀 ==========================================');
-    console.log(`🚀 Serveur Places & Demandes démarré sur Render`);
+    console.log(`🚀 Serveur Places & Demandes démarré (Mobile Optimized)`);
     console.log(`🚀 Port: ${PORT}`);
     console.log(`🚀 Environnement: ${process.env.NODE_ENV || 'development'}`);
     console.log('🚀 ==========================================');
@@ -514,7 +486,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('✅ Serveur prêt à accepter les connexions');
 });
 
-// Gestion de l'arrêt propre
 process.on('SIGTERM', () => {
     console.log('🛑 Arrêt du serveur...');
     server.close(() => {
@@ -531,7 +502,6 @@ process.on('SIGINT', () => {
     });
 });
 
-// Gestion des erreurs non capturées
 process.on('uncaughtException', (error) => {
     console.error('❌ Erreur non capturée:', error);
 });

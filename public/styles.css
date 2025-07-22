@@ -1,11 +1,7 @@
 /**
  * 🎨 STYLES CSS UNIFIÉS - GESTION DES PLACES
  * 
- * Ce fichier contient tous les styles pour :
- * 1. Page de gestion des demandes (/)
- * 2. Page de visualisation de salle (/salle)
- * 3. Navigation entre les pages
- * 4. Composants communs (notifications, modales, etc.)
+ * Version optimisée mobile sans notifications
  */
 
 /* ===========================================
@@ -23,6 +19,21 @@ body {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     height: 90vh;
     line-height: 1.6;
+    /* Désactiver la sélection de texte pour une meilleure expérience tactile */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Désactiver le zoom sur double tap */
+    touch-action: manipulation;
+}
+
+/* Permettre la sélection dans les inputs */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 .container {
@@ -58,28 +69,31 @@ body {
     margin-bottom: 20px;
 }
 
-/* Navigation entre les pages */
+/* Navigation entre les pages - Optimisée mobile */
 .navigation {
     display: flex;
     justify-content: center;
     flex-direction: row;
-    padding: 5px;
-    /* gap: 20px; */
-    /* margin-bottom: 20px; */
+    padding: 8px;
 }
 
 .nav-link {
     color: white;
     text-decoration: none;
-    padding: 10px 20px;
+    padding: 12px 24px; /* Boutons plus gros pour mobile */
     border-radius: 25px;
     background: rgba(255,255,255,0.2);
     transition: all 0.3s ease;
     font-weight: 500;
     width: fit-content;
+    min-height: 44px; /* Taille minimum recommandée pour tactile */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* Évite le zoom iOS */
 }
 
-.nav-link:hover {
+.nav-link:hover, .nav-link:active {
     background: rgba(255,255,255,0.3);
     transform: translateY(-2px);
 }
@@ -119,7 +133,7 @@ body {
 }
 
 .section {
-    padding: 10px;
+    padding: 12px; /* Padding augmenté pour mobile */
     flex: 1;
 }
 
@@ -135,7 +149,6 @@ body {
 .management-section {
     background: white;
     flex: 2;
-    /* margin-top: 120px; */
 }
 
 .section-header {
@@ -144,7 +157,6 @@ body {
 
 .section-title {
     font-size: 1.3rem;
-    /* margin-bottom: 5px; */
     color: #333;
     display: flex;
     align-items: center;
@@ -163,21 +175,21 @@ body {
 }
 
 /* ===========================================
-   FORMULAIRES
+   FORMULAIRES - Optimisés mobile
    =========================================== */
 
 .request-form {
-    padding: 15px;
+    padding: 16px;
 }
 
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 16px; /* Espacement augmenté */
 }
 
 .form-group label {
     display: block;
-    font-size: 0.8rem;
-    margin-bottom: 2px;
+    font-size: 16px; /* Taille augmentée pour éviter le zoom iOS */
+    margin-bottom: 6px;
     font-weight: 500;
     color: #4C6798;
 }
@@ -186,12 +198,13 @@ body {
 .form-group select, 
 .form-group textarea {
     width: 100%;
-    padding: 8px 15px;
+    padding: 12px 16px; /* Padding augmenté pour tactile */
     border: 2px solid #e9ecef;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px; /* Évite le zoom iOS */
     transition: all 0.3s ease;
     font-family: inherit;
+    min-height: 44px; /* Taille minimum tactile */
 }
 
 .form-group input:focus, 
@@ -204,18 +217,18 @@ body {
 
 .form-group textarea {
     resize: vertical;
-    height: 39px;
+    min-height: 60px;
 }
 
 /* ===========================================
-   BOUTONS
+   BOUTONS - Optimisés mobile
    =========================================== */
 
 .btn {
-    padding: 12px 24px;
+    padding: 14px 28px; /* Boutons plus gros */
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px; /* Taille standard mobile */
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -223,11 +236,14 @@ body {
     display: inline-block;
     text-align: center;
     line-height: 1.4;
+    min-height: 44px; /* Taille minimum tactile */
+    min-width: 44px;
+    /* Feedback tactile amélioré */
+    -webkit-tap-highlight-color: transparent;
 }
 
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.btn:active {
+    transform: scale(0.98); /* Feedback visuel au tap */
 }
 
 .btn-primary {
@@ -259,10 +275,10 @@ body {
     background: #6c757d;
     color: white;
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
+    width: 44px; /* Taille augmentée pour mobile */
+    height: 44px;
     padding: 0;
-    font-size: 16px;
+    font-size: 18px;
 }
 
 /* ===========================================
@@ -271,7 +287,7 @@ body {
 
 .zones-summary-compact {
     background: white;
-    padding: 15px 20px;
+    padding: 16px 20px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     text-align: center;
@@ -297,20 +313,20 @@ body {
 .zones-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
 }
 
 .zone-summary {
-    padding: 12px;
+    padding: 14px;
     border-radius: 8px;
     text-align: center;
     border: 2px solid;
     transition: all 0.3s ease;
+    min-height: 44px; /* Taille minimum tactile */
 }
 
-.zone-summary:hover {
-    transform: scale(1.02);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.zone-summary:active {
+    transform: scale(0.98);
 }
 
 .zone-name {
@@ -339,16 +355,20 @@ body {
 }
 
 .filters select {
-    padding: 8px 12px;
+    padding: 12px 16px; /* Padding augmenté */
     border: 1px solid #ddd;
     border-radius: 6px;
     background: white;
+    font-size: 16px; /* Évite le zoom iOS */
+    min-height: 44px;
 }
 
 .requests-list {
     max-height: 30vh;
     overflow-y: auto;
     padding-right: 10px;
+    /* Améliorer le scroll sur mobile */
+    -webkit-overflow-scrolling: touch;
 }
 
 .requests-list::-webkit-scrollbar {
@@ -382,22 +402,23 @@ body {
 }
 
 /* ===========================================
-   CARTES DE DEMANDES
+   CARTES DE DEMANDES - Optimisées mobile
    =========================================== */
 
 .request-card {
     background: white;
     border: 2.5px solid #e9ecef;
     border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 15px;
+    padding: 12px; /* Padding augmenté */
+    margin-bottom: 16px; /* Espacement augmenté */
     transition: all 0.3s ease;
     position: relative;
+    /* Améliorer l'interaction tactile */
+    -webkit-tap-highlight-color: transparent;
 }
 
-.request-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+.request-card:active {
+    transform: scale(0.99); /* Feedback tactile discret */
 }
 
 .request-card.pending {
@@ -431,17 +452,17 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
 }
 
 .request-places {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
 .places-count {
-    font-size: 1.2rem;
+    font-size: 1.3rem; /* Légèrement plus gros */
     font-weight: bold;
     color: #667eea;
 }
@@ -452,9 +473,9 @@ body {
 }
 
 .status-badge {
-    padding: 4px 10px;
+    padding: 6px 12px; /* Padding augmenté */
     border-radius: 20px;
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     font-weight: bold;
     color: white;
 }
@@ -465,41 +486,41 @@ body {
 .status-available-separated { background: #6f42c1; }
 
 .request-body {
-    /* margin-bottom: 5px; */
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 .request-info {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
 .info-item {
     display: flex;
     align-items: center;
-    gap: 3px;
-    margin-bottom: 3px;
-    font-size: 0.6rem;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 0.7rem;
 }
 
 .info-item .icon {
-    font-size: 0.7rem;
-    width: 16px;
+    font-size: 0.8rem;
+    width: 18px; /* Légèrement plus large */
     text-align: center;
 }
 
 .request-actions {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     flex-wrap: wrap;
 }
 
 .request-actions .btn {
     flex: 1;
-    min-width: 120px;
-    font-size: 0.8rem;
-    padding: 8px 12px;
+    min-width: 140px; /* Boutons plus larges */
+    font-size: 0.9rem;
+    padding: 12px 16px; /* Padding augmenté */
 }
 
 /* ===========================================
@@ -514,7 +535,6 @@ body {
     align-items: center;
     border-bottom: 1px solid #dee2e6;
     flex-wrap: wrap;
-    /* gap: 20px; */
 }
 
 .stat-item {
@@ -536,20 +556,20 @@ body {
 }
 
 /* ===========================================
-   PAGE SALLE - LAYOUT DES ZONES
+   PAGE SALLE - LAYOUT DES ZONES - Optimisé mobile
    =========================================== */
 
 .room-layout {
-    padding: 30px;
+    padding: 20px; /* Padding réduit pour mobile */
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr) auto;
-    gap: 20px;
+    gap: 16px; /* Gap augmenté pour éviter les erreurs de tap */
     min-height: 600px;
 }
 
 .zone-wide {
-    grid-column: 1 / -1; /* Prend toute la largeur */
+    grid-column: 1 / -1;
     max-width: 400px;
     margin: 0 auto;
 }
@@ -557,7 +577,7 @@ body {
 .zone {
     border: 3px solid #ddd;
     border-radius: 15px;
-    padding: 20px;
+    padding: 16px; /* Padding augmenté */
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -566,18 +586,20 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 200px;
+    min-height: 160px; /* Hauteur minimum pour tactile */
+    /* Améliorer l'interaction tactile */
+    -webkit-tap-highlight-color: transparent;
 }
 
-.zone:hover {
-    transform: translateY(-5px);
+.zone:active {
+    transform: scale(0.98); /* Feedback tactile */
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .zone-title {
     font-size: 1.1rem;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -585,7 +607,7 @@ body {
 .zone-subtitle {
     font-size: 0.8rem;
     opacity: 0.8;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-style: italic;
 }
 
@@ -600,44 +622,23 @@ body {
 
 .zone-info {
     font-size: 2rem;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-weight: bold;
 }
 
 .zone-capacity {
     font-size: 0.9rem;
     color: #666;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .zone-percentage {
     font-size: 0.8rem;
     font-weight: bold;
-    padding: 5px 10px;
+    padding: 6px 12px;
     border-radius: 15px;
     background-color: rgba(255, 255, 255, 0.3);
-    margin-bottom: 10px;
-}
-
-.zone-requests {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.zone-request-badge {
-    background: rgba(0,0,0,0.1);
-    color: #333;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin-bottom: 12px;
 }
 
 /* Couleurs des zones selon disponibilité */
@@ -673,7 +674,7 @@ body {
 }
 
 /* ===========================================
-   PANNEAU DE CONTRÔLE DES ZONES
+   PANNEAU DE CONTRÔLE DES ZONES - Optimisé mobile
    =========================================== */
 
 .overlay {
@@ -699,13 +700,15 @@ body {
     background: white;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    padding: 30px;
-    min-width: 400px;
+    padding: 24px; /* Padding augmenté */
+    min-width: 320px; /* Largeur minimum mobile */
     max-width: 90vw;
     max-height: 90vh;
     overflow-y: auto;
     z-index: 1000;
     display: none;
+    /* Améliorer le scroll sur mobile */
+    -webkit-overflow-scrolling: touch;
 }
 
 .control-panel.active {
@@ -714,12 +717,12 @@ body {
 
 .control-header {
     text-align: center;
-    margin-bottom: 25px;
+    margin-bottom: 24px;
 }
 
 .control-header h3 {
     color: #333;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-size: 1.3rem;
 }
 
@@ -729,78 +732,28 @@ body {
     font-weight: bold;
 }
 
-.zone-requests-info {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.zone-requests-info h4 {
-    margin-bottom: 10px;
-    color: #495057;
-    font-size: 1rem;
-}
-
-.zone-requests-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.zone-request-item {
-    padding: 8px 12px;
-    background: white;
-    border-radius: 6px;
-    border-left: 4px solid;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9rem;
-}
-
-.zone-request-item.status-available {
-    border-left-color: #28a745;
-}
-
-.zone-request-item.status-pending {
-    border-left-color: #6c757d;
-}
-
-.zone-request-item.status-in-progress {
-    border-left-color: #fd7e14;
-}
-
-.request-status {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
-.no-requests {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-}
-
 .control-buttons {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px; /* Gap augmenté */
+    margin-bottom: 24px;
 }
 
 .control-btn {
-    padding: 12px;
+    padding: 16px; /* Padding augmenté pour mobile */
     border: none;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 1.1rem; /* Taille augmentée */
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-height: 48px; /* Hauteur minimum tactile */
+    /* Feedback tactile */
+    -webkit-tap-highlight-color: transparent;
 }
 
-.control-btn:hover {
-    transform: scale(1.05);
+.control-btn:active {
+    transform: scale(0.95);
 }
 
 .btn-decrease {
@@ -808,7 +761,7 @@ body {
     color: white;
 }
 
-.btn-decrease:hover {
+.btn-decrease:active {
     background-color: #d84315;
 }
 
@@ -817,26 +770,8 @@ body {
     color: white;
 }
 
-.btn-increase:hover {
+.btn-increase:active {
     background-color: #2e7d32;
-}
-
-.control-info {
-    background: #e3f2fd;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.control-info kbd {
-    background: #455a64;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.8rem;
-    margin: 0 2px;
 }
 
 /* ===========================================
@@ -845,12 +780,12 @@ body {
 
 .legend {
     background: #f8f9fa;
-    padding: 20px 30px;
+    padding: 20px 24px; /* Padding augmenté */
     border-top: 1px solid #dee2e6;
 }
 
 .legend h3 {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
     color: #495057;
     font-size: 1.1rem;
 }
@@ -859,25 +794,26 @@ body {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 16px; /* Gap augmenté */
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px; /* Gap augmenté */
     font-size: 0.9rem;
+    padding: 8px; /* Padding pour améliorer le tactile */
 }
 
 .legend-color {
-    width: 20px;
-    height: 20px;
+    width: 24px; /* Taille augmentée */
+    height: 24px;
     border-radius: 4px;
     border: 2px solid;
 }
 
 /* ===========================================
-   MODALES
+   MODALES - Optimisées mobile
    =========================================== */
 
 .modal-overlay {
@@ -891,20 +827,23 @@ body {
     display: none;
     justify-content: center;
     align-items: center;
+    padding: 20px; /* Padding pour éviter les bords */
 }
 
 .modal {
     background: white;
     border-radius: 12px;
     max-width: 500px;
-    width: 90%;
-    max-height: 80vh;
+    width: 100%;
+    max-height: 85vh; /* Hauteur réduite pour mobile */
     overflow-y: auto;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    /* Améliorer le scroll sur mobile */
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-header {
-    padding: 20px 25px 15px;
+    padding: 20px 24px 16px; /* Padding augmenté */
     border-bottom: 1px solid #dee2e6;
     display: flex;
     justify-content: space-between;
@@ -914,32 +853,83 @@ body {
 .modal-header h3 {
     margin: 0;
     color: #495057;
+    font-size: 1.2rem;
 }
 
 .modal-body {
-    padding: 20px 25px;
+    padding: 20px 24px; /* Padding augmenté */
 }
 
 .modal-footer {
-    padding: 15px 25px 20px;
+    padding: 16px 24px 20px; /* Padding augmenté */
     border-top: 1px solid #dee2e6;
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    justify-content: space-between; /* Retour à gauche, Confirmer à droite */
+    gap: 12px; /* Gap augmenté */
+}
+
+.modal-footer .btn {
+    flex: 1;
+    max-width: 150px; /* Limite la largeur des boutons */
+}
+
+.treatment-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Gap augmenté */
+    margin-bottom: 20px;
+}
+
+.treatment-option {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 14px; /* Padding augmenté */
+    transition: all 0.3s ease;
+    min-height: 44px; /* Hauteur minimum tactile */
+}
+
+.treatment-option input[type="radio"]:checked + label {
+    font-weight: bold;
+}
+
+.treatment-option:has(input[type="radio"]:checked) {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.treatment-option input[type="radio"] {
+    margin-right: 12px; /* Marge augmentée */
+    transform: scale(1.2); /* Radio button plus gros */
+}
+
+.treatment-option label {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    width: 100%;
+    margin: 0;
+    font-size: 16px; /* Taille augmentée */
+}
+
+.treatment-option label small {
+    font-size: 14px;
+    color: #6c757d;
+    margin-top: 4px;
 }
 
 .zone-selection {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px; /* Gap augmenté */
     margin-bottom: 20px;
 }
 
 .zone-option {
     border: 2px solid #dee2e6;
     border-radius: 8px;
-    padding: 12px;
+    padding: 14px; /* Padding augmenté */
     transition: all 0.3s ease;
+    min-height: 44px; /* Hauteur minimum tactile */
 }
 
 .zone-option.available {
@@ -954,7 +944,8 @@ body {
 }
 
 .zone-option input[type="radio"] {
-    margin-right: 10px;
+    margin-right: 12px; /* Marge augmentée */
+    transform: scale(1.2); /* Radio button plus gros */
 }
 
 .zone-option label {
@@ -964,6 +955,7 @@ body {
     cursor: pointer;
     width: 100%;
     margin: 0;
+    font-size: 16px; /* Taille augmentée */
 }
 
 .zone-capacity {
@@ -973,15 +965,15 @@ body {
 
 .modal-info {
     background: #e3f2fd;
-    padding: 12px;
+    padding: 14px; /* Padding augmenté */
     border-radius: 6px;
-    margin-top: 15px;
+    margin-top: 16px;
     font-size: 0.9rem;
 }
 
 .status-info {
-    margin: 15px 0;
-    padding: 12px;
+    margin: 16px 0;
+    padding: 14px; /* Padding augmenté */
     border-radius: 6px;
     font-size: 0.9rem;
 }
@@ -990,26 +982,18 @@ body {
     background: #fff3e0;
     color: #e65100;
     border-left: 4px solid #ff9800;
-    padding-left: 12px;
+    padding-left: 14px;
 }
 
 .normal-info {
     background: #e8f5e8;
     color: #2e7d32;
     border-left: 4px solid #4CAF50;
-    padding-left: 12px;
+    padding-left: 14px;
 }
 
 .treatment-buttons {
-    display: flex;
-    gap: 10px;
-    margin: 15px 0;
-}
-
-.treatment-buttons .btn {
-    flex: 1;
-    padding: 12px;
-    font-size: 0.9rem;
+    display: none; /* Anciens boutons non utilisés */
 }
 
 /* Masquer les anciens éléments de demandes dans les zones */
@@ -1023,57 +1007,19 @@ body {
 }
 
 /* ===========================================
-   NOTIFICATIONS
+   NOTIFICATIONS - SUPPRIMÉES COMPLÈTEMENT
    =========================================== */
 
 #notifications {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1100;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: none !important;
 }
 
 .notification {
-    background: white;
-    border-left: 4px solid;
-    border-radius: 6px;
-    padding: 15px 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-width: 350px;
-    font-weight: 500;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-}
-
-.notification.show {
-    transform: translateX(0);
-}
-
-.notification.success {
-    border-left-color: #28a745;
-    color: #155724;
-}
-
-.notification.info {
-    border-left-color: #17a2b8;
-    color: #0c5460;
-}
-
-.notification.warning {
-    border-left-color: #ffc107;
-    color: #856404;
-}
-
-.notification.error {
-    border-left-color: #dc3545;
-    color: #721c24;
+    display: none !important;
 }
 
 /* ===========================================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN - Amélioré pour mobile
    =========================================== */
 
 @media (max-width: 1200px) {
@@ -1104,26 +1050,32 @@ body {
 
 @media (max-width: 768px) {
     .header {
-        padding: 20px 15px;
+        padding: 16px 12px; /* Padding réduit */
     }
     
     .header h1 {
-        font-size: 1.5rem;
+        font-size: 1.4rem; /* Taille réduite */
     }
     
     .navigation {
         flex-direction: row;
-        gap: 10px;
+        gap: 8px;
+        padding: 6px;
+    }
+    
+    .nav-link {
+        padding: 10px 18px;
+        font-size: 14px;
     }
     
     .section {
-        padding: 10px;
+        padding: 8px;
     }
     
     .stats-bar {
-        padding: 15px;
+        padding: 12px;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
     
     .stat-item {
@@ -1132,40 +1084,38 @@ body {
         align-items: center;
         width: 100%;
         text-align: left;
+        padding: 8px 12px;
+        background: white;
+        border-radius: 6px;
     }
     
     .room-layout {
-        padding: 10px;
-        gap: 10px;
-        /* grid-template-columns: 1fr;
-        grid-template-rows: repeat(9, 1fr) auto; */
-    }
-    
-    .zone-wide {
-        grid-column: 1;
+        padding: 12px;
+        gap: 12px;
     }
     
     .zone {
         min-height: 120px;
-        padding: 15px;
+        padding: 12px;
     }
     
     .zone-title {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
     
     .zone-info {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
     }
     
     .control-panel {
         min-width: 300px;
         padding: 20px;
+        margin: 10px;
     }
     
     .control-buttons {
         grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        gap: 10px;
     }
     
     .request-actions {
@@ -1174,6 +1124,7 @@ body {
     
     .request-actions .btn {
         min-width: auto;
+        width: 100%;
     }
     
     .zones-grid {
@@ -1181,33 +1132,49 @@ body {
     }
     
     .zones-summary-compact {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
     }
     
     .legend-items {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 12px;
     }
     
-    #notifications {
-        top: 10px;
-        right: 10px;
-        left: 10px;
+    .modal {
+        margin: 10px;
+        max-height: 90vh;
     }
     
-    .notification {
-        max-width: none;
+    .modal-footer {
+        flex-direction: row; /* Garder en ligne sur mobile pour 2 boutons */
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-footer .btn {
+        width: auto;
+        min-width: 100px;
+        max-width: 120px;
+        margin-bottom: 0;
+    }
+    
+    .treatment-selection {
+        flex-direction: column;
+    }
+    
+    .treatment-option {
+        margin-bottom: 8px;
     }
 }
 
 @media (max-width: 480px) {
     .header h1 {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
     
     .header p {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
     
     .zone {
@@ -1216,30 +1183,86 @@ body {
     }
     
     .zone-info {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+    }
+    
+    .control-buttons {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
     
     .modal {
         width: 95%;
-        margin: 20px;
+        margin: 8px;
+    }
+    
+    .request-form {
+        padding: 12px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 14px;
     }
 }
 
-nav{
+/* ===========================================
+   NAVIGATION MOBILE EN BAS
+   =========================================== */
+
+nav {
     background-color: #333;
     position: fixed;
     bottom: 0;
     width: 100%;
     z-index: 1000;
+    /* Améliorer l'apparence sur mobile */
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
 }
 
-#available-places-resume{
-    font-size: 0.7rem;
+#available-places-resume {
+    font-size: 0.8rem;
+    padding: 8px 0;
 }
 
-#body-index{
+#body-index {
     overflow: hidden;
     position: fixed;
     width: 100%;
     height: 100%;
+    /* Ajuster pour la navigation en bas */
+    padding-bottom: 60px;
+}
+
+/* ===========================================
+   AMÉLIORATIONS TACTILES SUPPLÉMENTAIRES
+   =========================================== */
+
+/* Améliorer les zones de tap */
+.clickable {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+/* Désactiver le highlight bleu sur tap */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Améliorer les transitions pour le feedback tactile */
+.zone, .btn, .request-card, .zone-option {
+    will-change: transform;
+}
+
+/* Feedback vibratoire pour les appareils compatibles */
+@media (hover: none) and (pointer: coarse) {
+    .zone:active,
+    .btn:active,
+    .control-btn:active {
+        /* Le JavaScript peut ajouter une vibration ici */
+    }
 }

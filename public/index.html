@@ -2,8 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Gestion des Places - Demandes</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -16,8 +15,6 @@
         </div>
     </nav>
     <div class="container">
-
-
 
         <div class="main-content">
             <!-- Section pour gérer les demandes -->
@@ -87,13 +84,23 @@
                 <!-- Choix du type de traitement (visible lors de la prise en charge) -->
                 <div id="treatmentChoice" style="display: none;">
                     <p><strong>Comment traiter cette demande ?</strong></p>
-                    <div class="treatment-buttons">
-                        <button class="btn btn-success" onclick="selectTreatment('available')">
-                            ✅ Places normales (ensemble)
-                        </button>
-                        <button class="btn btn-warning" onclick="selectTreatment('available-separated')">
-                            ⚠️ Places séparées (pas côte à côte)
-                        </button>
+                    <div class="treatment-selection">
+                        <div class="treatment-option">
+                            <input type="radio" name="selectedTreatment" value="available" 
+                                   id="treatment-normal" onchange="onTreatmentSelected()">
+                            <label for="treatment-normal">
+                                <strong>✅ Places normales (ensemble)</strong>
+                                <small>Les personnes seront assises côte à côte</small>
+                            </label>
+                        </div>
+                        <div class="treatment-option">
+                            <input type="radio" name="selectedTreatment" value="available-separated" 
+                                   id="treatment-separated" onchange="onTreatmentSelected()">
+                            <label for="treatment-separated">
+                                <strong>⚠️ Places séparées (pas côte à côte)</strong>
+                                <small>Les personnes ne seront pas assises ensemble</small>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -114,7 +121,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeZoneModal()">Annuler</button>
+                <button class="btn btn-secondary" onclick="goBackToTreatmentChoice()" id="backBtn" style="display: none;">
+                    ← Retour
+                </button>
                 <button class="btn btn-success" onclick="confirmZoneAssignment()" id="confirmZoneBtn" disabled>
                     ✅ Confirmer
                 </button>
@@ -122,18 +131,10 @@
         </div>
     </div>
 
-    <!-- Zone de notifications -->
-    <div id="notifications"></div>
-
     <script>
         /**
          * 🎯 APPLICATION DE GESTION DES DEMANDES
-         * 
-         * Cette page permet de :
-         * 1. Créer des demandes de places
-         * 2. Traiter les demandes (accepter/refuser avec assignation de zone)
-         * 3. Visualiser l'état des zones en temps réel
-         * 4. Communiquer avec la page de visualisation de salle
+         * Version optimisée mobile sans notifications
          */
 
         // ===========================================
@@ -150,7 +151,17 @@
         let currentRequests = new Map();
         let zones = {};
         let connectedUsers = 0;
-        let currentRequestForZone = null; // Pour la modale d'assignation
+        let currentRequestForZone = null;
+
+        // ===========================================
+        // FEEDBACK TACTILE (pour mobile)
+        // ===========================================
+        
+        function vibrate(pattern = [50]) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
 
         // ===========================================
         // GESTION DES CONNEXIONS SOCKET.IO
@@ -159,35 +170,31 @@
         socket.on('connect', () => {
             console.log('✅ Connecté au serveur');
             updateConnectionStatus(true);
-            showNotification('Connexion établie avec succès!', 'success');
+            vibrate([100]); // Vibration de connexion
         });
 
         socket.on('disconnect', (reason) => {
             console.log('❌ Déconnexion:', reason);
             updateConnectionStatus(false);
-            showNotification('Connexion perdue. Reconnexion en cours...', 'warning');
         });
 
         socket.on('reconnect', () => {
             console.log('🔄 Reconnexion réussie');
             updateConnectionStatus(true);
-            showNotification('Reconnexion réussie!', 'success');
+            vibrate([50, 50, 100]); // Vibration de reconnexion
         });
 
         // Réception des données initiales
         socket.on('initial_data', (data) => {
             console.log('📥 Données initiales reçues', data);
             
-            // Mise à jour des demandes
             currentRequests.clear();
             data.requests.forEach(request => {
                 currentRequests.set(request.id, request);
             });
             
-            // Mise à jour des zones
             zones = data.zones;
             
-            // Mise à jour de l'interface
             updateRequestsList();
             updateZonesSummary();
             updateConnectedUsers(data.connectedUsers);
@@ -198,22 +205,32 @@
             console.log('📨 Nouvelle demande:', request);
             currentRequests.set(request.id, request);
             addRequestToList(request);
-            showNotification(`Nouvelle demande de ${request.userName} pour ${request.placesNeeded} place(s)`, 'info');
+            vibrate([100, 50, 100]); // Vibration pour nouvelle demande
         });
 
         socket.on('request_updated', (request) => {
             console.log('🔄 Demande mise à jour:', request);
             currentRequests.set(request.id, request);
             updateRequestInList(request);
+            vibrate([50]); // Vibration légère pour mise à jour
+        });
+
+        socket.on('request_abandoned', (data) => {
+            console.log('❌ Demande abandonnée:', data);
+            const request = currentRequests.get(data.requestId);
+            if (request) {
+                request.status = 'pending';
+                request.handledBy = null;
+                request.handledByName = null;
+                currentRequests.set(data.requestId, request);
+                updateRequestInList(request);
+            }
             
-            const statusMessages = {
-                'in-progress': '⏳ Demande prise en charge',
-                'available': '✅ Places attribuées',
-                'available-separated': '✅ Places attribuées (séparées)'
-            };
-            
-            if (statusMessages[request.status]) {
-                showNotification(statusMessages[request.status], 'info');
+            // Fermer la modale si c'est celle qui était ouverte
+            if (currentRequestForZone && currentRequestForZone.requestId === data.requestId) {
+                document.getElementById('zoneModalOverlay').style.display = 'none';
+                currentRequestForZone = null;
+                document.getElementById('confirmZoneBtn').disabled = true;
             }
         });
 
@@ -221,7 +238,6 @@
             currentRequests.delete(data.requestId);
             const element = document.querySelector(`[data-request-id="${data.requestId}"]`);
             if (element) element.remove();
-            showNotification('Demande supprimée', 'info');
         });
 
         // Gestion des mises à jour de zones
@@ -229,10 +245,6 @@
             if (zones[data.zoneId]) {
                 zones[data.zoneId].current = data.current;
                 updateZonesSummary();
-                
-                if (data.manual) {
-                    showNotification(`Zone ${zones[data.zoneId].name} mise à jour manuellement`, 'info');
-                }
             }
         });
 
@@ -240,7 +252,7 @@
             if (zones[data.zoneId]) {
                 zones[data.zoneId].current = data.current;
                 updateZonesSummary();
-                showNotification(`${data.placesRemoved} places retirées de ${zones[data.zoneId].name}`, 'success');
+                vibrate([100, 100, 100]); // Vibration pour attribution réussie
             }
         });
 
@@ -250,7 +262,7 @@
 
         socket.on('error', (error) => {
             console.error('❌ Erreur serveur:', error);
-            showNotification(error, 'error');
+            vibrate([200, 100, 200]); // Vibration d'erreur
         });
 
         // ===========================================
@@ -268,12 +280,12 @@
             
             // Validation
             if (!formData.userName || !formData.placesNeeded) {
-                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+                vibrate([200, 100, 200]); // Vibration d'erreur
                 return;
             }
             
             if (formData.placesNeeded < 1 || formData.placesNeeded > 20) {
-                showNotification('Le nombre de places doit être entre 1 et 20', 'warning');
+                vibrate([200, 100, 200]); // Vibration d'erreur
                 return;
             }
             
@@ -282,7 +294,7 @@
             
             // Reset du formulaire
             e.target.reset();
-            showNotification('Demande envoyée avec succès!', 'success');
+            vibrate([100]); // Vibration de succès
         });
 
         // ===========================================
@@ -303,7 +315,6 @@
                 return;
             }
             
-            // Tri par timestamp (plus récentes d'abord)
             const sortedRequests = Array.from(currentRequests.values())
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             
@@ -410,17 +421,25 @@
 
         function takeInCharge(requestId) {
             console.log('⏳ Prise en charge de la demande:', requestId);
+            vibrate([100]); // Feedback tactile
             
-            // 1. Mettre la demande en "in-progress"
             socket.emit('update_request_status', {
                 requestId: requestId,
                 status: 'in-progress'
             });
             
-            // 2. Ouvrir immédiatement la modale pour traiter
             setTimeout(() => {
                 openZoneModal(requestId, 'process-request');
-            }, 100); // Petit délai pour que l'état soit mis à jour
+            }, 100);
+        }
+
+        function abandonRequest(requestId) {
+            console.log('❌ Abandon du traitement de la demande:', requestId);
+            vibrate([100, 50, 100]); // Feedback d'abandon
+            
+            socket.emit('abandon_request', {
+                requestId: requestId
+            });
         }
 
         function updateRequestStatus(requestId, status) {
@@ -435,13 +454,15 @@
         // GESTION DE LA MODALE DE TRAITEMENT
         // ===========================================
 
+        let currentModalStep = 'treatment'; // 'treatment' ou 'zone'
+
         function openZoneModal(requestId, action) {
             const request = currentRequests.get(requestId);
             if (!request) return;
             
             currentRequestForZone = { requestId, action };
+            currentModalStep = 'treatment'; // Reset à la première étape
             
-            // Mise à jour du contenu de la modale
             document.getElementById('modalRequestInfo').textContent = 
                 `${request.userName} - ${request.placesNeeded} place(s)`;
             
@@ -451,22 +472,82 @@
             document.getElementById('zoneChoice').style.display = 'none';
             document.getElementById('statusInfo').innerHTML = '';
             document.getElementById('confirmZoneBtn').disabled = true;
+            document.getElementById('backBtn').style.display = 'none';
+            
+            // Reset des sélections
+            const treatmentRadios = document.querySelectorAll('input[name="selectedTreatment"]');
+            treatmentRadios.forEach(radio => radio.checked = false);
             
             if (action === 'process-request') {
-                // Mode traitement : demande déjà en cours, afficher le choix du traitement
                 document.getElementById('modalTitle').textContent = '🎯 Traiter la demande';
                 document.getElementById('treatmentChoice').style.display = 'block';
                 document.getElementById('confirmZoneBtn').textContent = '➡️ Continuer';
+                currentModalStep = 'treatment';
+                // Le nom est obligatoire pour passer à l'étape suivante
+                updateConfirmButtonState();
             } else {
-                // Mode direct (available ou available-separated) - ne devrait plus arriver
                 document.getElementById('modalTitle').textContent = '🎯 Attribuer des places';
                 currentRequestForZone.targetStatus = action;
                 showZoneSelection(request, action);
                 document.getElementById('confirmZoneBtn').textContent = '✅ Confirmer l\'attribution';
+                currentModalStep = 'zone';
             }
             
-            // Affichage de la modale
             document.getElementById('zoneModalOverlay').style.display = 'flex';
+            vibrate([50]); // Feedback d'ouverture
+        }
+
+        function onTreatmentSelected() {
+            console.log('🔘 Traitement sélectionné');
+            updateConfirmButtonState();
+        }
+
+        function updateConfirmButtonState() {
+            const handlerName = document.getElementById('handlerName').value.trim();
+            const selectedTreatment = document.querySelector('input[name="selectedTreatment"]:checked');
+            const selectedZone = document.querySelector('input[name="selectedZone"]:checked');
+            
+            console.log('🔄 Mise à jour état bouton:', {
+                step: currentModalStep,
+                handlerName: !!handlerName,
+                selectedTreatment: !!selectedTreatment,
+                selectedZone: !!selectedZone
+            });
+            
+            if (currentRequestForZone?.action === 'process-request') {
+                if (currentModalStep === 'treatment') {
+                    // Première étape : nom + traitement obligatoires
+                    document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedTreatment);
+                } else {
+                    // Deuxième étape : zone obligatoire (nom déjà validé)
+                    document.getElementById('confirmZoneBtn').disabled = !selectedZone;
+                }
+            } else {
+                // Mode attribution directe : nom ET zone
+                document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedZone);
+            }
+        }
+
+        function goBackToTreatmentChoice() {
+            if (!currentRequestForZone) return;
+            
+            console.log('⬅️ Retour à la première étape');
+            
+            // Revenir à la première étape
+            currentModalStep = 'treatment';
+            document.getElementById('treatmentChoice').style.display = 'block';
+            document.getElementById('zoneChoice').style.display = 'none';
+            document.getElementById('statusInfo').innerHTML = '';
+            document.getElementById('backBtn').style.display = 'none';
+            document.getElementById('confirmZoneBtn').textContent = '➡️ Continuer';
+            document.getElementById('modalTitle').textContent = '🎯 Traiter la demande';
+            
+            // Reset de la sélection de zone
+            const zoneRadios = document.querySelectorAll('input[name="selectedZone"]');
+            zoneRadios.forEach(radio => radio.checked = false);
+            
+            updateConfirmButtonState();
+            vibrate([30]); // Feedback de retour
         }
 
         function selectTreatment(treatmentType) {
@@ -475,20 +556,17 @@
             
             currentRequestForZone.targetStatus = treatmentType;
             
-            // Masquer le choix de traitement et afficher la sélection de zone
             document.getElementById('treatmentChoice').style.display = 'none';
             showZoneSelection(request, treatmentType);
             document.getElementById('confirmZoneBtn').textContent = '✅ Confirmer l\'attribution';
             
-            // Révaluer l'état du bouton maintenant qu'on est en mode attribution
             onZoneSelected();
+            vibrate([50]); // Feedback de sélection
         }
 
         function showZoneSelection(request, treatmentType) {
-            // Afficher la sélection de zone
             document.getElementById('zoneChoice').style.display = 'block';
             
-            // Information sur le type d'attribution
             const statusInfo = document.getElementById('statusInfo');
             if (treatmentType === 'available-separated') {
                 statusInfo.innerHTML = `
@@ -506,7 +584,6 @@
                 `;
             }
             
-            // Création de la liste des zones disponibles
             const zoneSelection = document.getElementById('zoneSelection');
             zoneSelection.innerHTML = '';
             
@@ -527,14 +604,29 @@
                 zoneSelection.appendChild(div);
             });
             
-            // Révaluer l'état du bouton
             onZoneSelected();
         }
 
         function closeZoneModal() {
+            // Vérifier si on est en train d'abandonner une demande en cours de traitement
+            if (currentRequestForZone && currentRequestForZone.action === 'process-request') {
+                const request = currentRequests.get(currentRequestForZone.requestId);
+                if (request && request.status === 'in-progress') {
+                    // Demander confirmation avant d'abandonner
+                    if (confirm('Abandonner le traitement de cette demande ?\n\nElle repassera en attente pour permettre à d\'autres de la traiter.')) {
+                        abandonRequest(currentRequestForZone.requestId);
+                    } else {
+                        // L'utilisateur a annulé l'abandon, on garde la modale ouverte
+                        return;
+                    }
+                }
+            }
+            
             document.getElementById('zoneModalOverlay').style.display = 'none';
             currentRequestForZone = null;
             document.getElementById('confirmZoneBtn').disabled = true;
+            document.getElementById('backBtn').style.display = 'none';
+            vibrate([30]); // Feedback de fermeture
         }
 
         function onZoneSelected() {
@@ -542,10 +634,8 @@
             const selectedZone = document.querySelector('input[name="selectedZone"]:checked');
             
             if (currentRequestForZone?.action === 'process-request' && !currentRequestForZone.targetStatus) {
-                // Mode traitement : juste vérifier le nom pour continuer vers le choix de zone
                 document.getElementById('confirmZoneBtn').disabled = !handlerName;
             } else {
-                // Mode attribution : vérifier nom ET zone
                 document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedZone);
             }
         }
@@ -557,11 +647,8 @@
             if (!handlerName) return;
             
             if (currentRequestForZone.action === 'process-request' && !currentRequestForZone.targetStatus) {
-                // Première étape : choix du type de traitement fait, on ne fait rien ici
-                // La fonction selectTreatment gère la suite
                 return;
             } else {
-                // Attribution finale avec zone
                 const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
                 if (!selectedZone) return;
                 
@@ -574,6 +661,7 @@
                     handledByName: handlerName
                 });
                 
+                vibrate([100, 50, 100]); // Feedback de confirmation
                 closeZoneModal();
             }
         }
@@ -583,19 +671,11 @@
         // ===========================================
 
         function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.textContent = '🟢 Connecté';
-                status.className = 'connection-status connected';
-            } else {
-                status.textContent = '🔴 Déconnecté';
-                status.className = 'connection-status disconnected';
-            }
+            // Pas d'affichage de statut dans cette version mobile
         }
 
         function updateConnectedUsers(count) {
             connectedUsers = count;
-            document.getElementById('connectedCount').textContent = count;
         }
 
         function updateZonesSummary() {
@@ -608,51 +688,51 @@
             const cards = document.querySelectorAll('.request-card');
             
             cards.forEach(card => {
-                const status = card.classList[1]; // ex: "pending"
+                const status = card.classList[1];
                 card.style.display = (filter === 'all' || status === filter) ? 'block' : 'none';
             });
-        }
-
-        function showNotification(message, type = 'info', duration = 4000) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            
-            document.getElementById('notifications').appendChild(notification);
-            
-            setTimeout(() => notification.classList.add('show'), 100);
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 300);
-            }, duration);
         }
 
         // ===========================================
         // INITIALISATION
         // ===========================================
 
-        // Également déclencher la validation quand on tape le nom
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Application des demandes initialisée');
+            console.log('🚀 Application des demandes initialisée (version mobile)');
             
             // Pré-remplissage pour les tests
             const randomNames = ['Alice Martin', 'Bob Dupont', 'Claire Bernard', 'David Moreau'];
             document.getElementById('userName').value = 
                 randomNames[Math.floor(Math.random() * randomNames.length)];
             
-            // Ajouter l'écouteur pour le champ nom dans la modale
             const handlerNameInput = document.getElementById('handlerName');
             if (handlerNameInput) {
-                handlerNameInput.addEventListener('input', onZoneSelected);
+                handlerNameInput.addEventListener('input', updateConfirmButtonState);
             }
+
+            // Ajout de listeners pour le feedback tactile
+            document.querySelectorAll('.btn, .zone, .request-card').forEach(element => {
+                element.addEventListener('touchstart', () => {
+                    vibrate([30]);
+                }, { passive: true });
+            });
         });
 
         // Gestion des erreurs globales
         window.addEventListener('error', (event) => {
             console.error('❌ Erreur JavaScript:', event.error);
-            showNotification('Une erreur inattendue s\'est produite', 'error');
+            vibrate([200, 100, 200]); // Vibration d'erreur
         });
+
+        // Empêcher le zoom sur double-tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>

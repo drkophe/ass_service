@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Gestion des Places - Visualisation Salle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -15,11 +15,6 @@
         </div>
     </nav>
     <div class="container">
-        <!-- En-tête avec navigation -->
-        <!-- <div class="header">
-            <h1>Visualisation de la Salle</h1>
-        </div> -->
-
         <!-- Statistiques globales -->
         <div class="stats-bar">
             <div class="stat-item">
@@ -175,18 +170,10 @@
         </button>
     </div>
 
-    <!-- Zone de notifications -->
-    <div id="notifications"></div>
-
     <script>
         /**
          * 🎪 APPLICATION DE VISUALISATION DE SALLE
-         * 
-         * Cette page permet de :
-         * 1. Visualiser l'état des 6 zones de la salle en temps réel
-         * 2. Modifier manuellement les places disponibles
-         * 3. Voir les demandes assignées à chaque zone
-         * 4. Synchroniser avec la page de gestion des demandes
+         * Version optimisée mobile sans notifications
          */
 
         // ===========================================
@@ -206,41 +193,47 @@
         let currentZone = null;
 
         // ===========================================
+        // FEEDBACK TACTILE (pour mobile)
+        // ===========================================
+        
+        function vibrate(pattern = [50]) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // ===========================================
         // GESTION DES CONNEXIONS SOCKET.IO
         // ===========================================
 
         socket.on('connect', () => {
             console.log('✅ Connecté au serveur');
             updateConnectionStatus(true);
-            showNotification('Connexion établie avec succès!', 'success');
+            vibrate([100]); // Vibration de connexion
         });
 
         socket.on('disconnect', (reason) => {
             console.log('❌ Déconnexion:', reason);
             updateConnectionStatus(false);
-            showNotification('Connexion perdue. Reconnexion en cours...', 'warning');
         });
 
         socket.on('reconnect', () => {
             console.log('🔄 Reconnexion réussie');
             updateConnectionStatus(true);
-            showNotification('Reconnexion réussie!', 'success');
+            vibrate([50, 50, 100]); // Vibration de reconnexion
         });
 
         // Réception des données initiales
         socket.on('initial_data', (data) => {
             console.log('📥 Données initiales reçues', data);
             
-            // Mise à jour des zones
             zones = data.zones;
             
-            // Mise à jour des demandes
             requests.clear();
             data.requests.forEach(request => {
                 requests.set(request.id, request);
             });
             
-            // Mise à jour de l'interface
             updateAllZonesDisplay();
             updateStatsBar();
             updateConnectedUsers(data.connectedUsers);
@@ -256,7 +249,7 @@
                 updateStatsBar();
                 
                 if (data.manual) {
-                    showNotification(`${zones[data.zoneId].name} mise à jour par ${data.updatedBy}`, 'info');
+                    vibrate([50]); // Feedback pour mise à jour manuelle
                 }
             }
         });
@@ -269,10 +262,7 @@
                 updateZoneDisplay(data.zoneId);
                 updateStatsBar();
                 
-                showNotification(
-                    `${data.placesRemoved} places retirées de ${zones[data.zoneId].name} (demande acceptée)`, 
-                    'success'
-                );
+                vibrate([100, 50, 100]); // Feedback pour attribution
             }
         });
 
@@ -295,11 +285,12 @@
 
         socket.on('error', (error) => {
             console.error('❌ Erreur serveur:', error);
-            showNotification(error.message || error, 'error');
+            vibrate([200, 100, 200]); // Vibration d'erreur
         });
 
         socket.on('update_confirmed', (data) => {
             console.log('✅ Mise à jour confirmée:', data);
+            vibrate([100]); // Feedback de confirmation
         });
 
         // ===========================================
@@ -307,14 +298,7 @@
         // ===========================================
 
         function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.textContent = '🟢 Connecté';
-                status.className = 'connection-status connected';
-            } else {
-                status.textContent = '🔴 Déconnecté';
-                status.className = 'connection-status disconnected';
-            }
+            // Pas d'affichage de statut dans cette version mobile optimisée
         }
 
         function updateConnectedUsers(count) {
@@ -344,7 +328,6 @@
 
             const percentage = Math.round((zone.current / zone.max) * 100);
             
-            // Mise à jour des éléments DOM
             const countElement = document.getElementById(`${zoneId}-count`);
             const maxElement = document.getElementById(`${zoneId}-max`);
             const percentageElement = document.getElementById(`${zoneId}-percentage`);
@@ -354,14 +337,12 @@
             if (maxElement) maxElement.textContent = zone.max;
             if (percentageElement) percentageElement.textContent = `${percentage}%`;
 
-            // Application des couleurs selon le pourcentage
             if (zoneElement) {
                 updateZoneColor(zoneElement, percentage, zone.current === 0);
             }
         }
 
         function updateZoneColor(zoneElement, percentage, isEmpty) {
-            // Suppression des classes de couleur existantes
             zoneElement.classList.remove('zone-green', 'zone-yellow', 'zone-orange', 'zone-red', 'zone-gray');
             
             if (isEmpty) {
@@ -387,15 +368,14 @@
             if (!zone) return;
 
             console.log(`🎛️ Ouverture du panneau pour: ${zoneId}`);
+            vibrate([50]); // Feedback d'ouverture
             
             currentZone = zoneId;
             
-            // Mise à jour du contenu du panneau
             document.getElementById('controlTitle').textContent = zone.name;
             document.getElementById('controlCurrentCount').textContent = zone.current;
             document.getElementById('controlMaxCount').textContent = zone.max;
             
-            // Affichage du panneau
             document.getElementById('controlPanel').classList.add('active');
             document.getElementById('overlay').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -403,6 +383,7 @@
 
         function closeControlPanel() {
             console.log('❌ Fermeture du panneau de contrôle');
+            vibrate([30]); // Feedback de fermeture
             
             document.getElementById('controlPanel').classList.remove('active');
             document.getElementById('overlay').classList.remove('active');
@@ -418,7 +399,7 @@
         function updateZone(delta) {
             if (!currentZone || !socket || !socket.connected) {
                 console.warn('⚠️ Impossible de mettre à jour: zone ou connexion non disponible');
-                showNotification('Impossible de mettre à jour: pas de connexion', 'warning');
+                vibrate([200, 100, 200]); // Vibration d'erreur
                 return;
             }
 
@@ -427,17 +408,16 @@
 
             const newValue = zone.current + delta;
             
-            // Validation des limites
             if (newValue < 0 || newValue > zone.max) {
                 console.warn(`⚠️ Valeur ${newValue} hors limites pour ${currentZone} (0-${zone.max})`);
                 showErrorFeedback();
-                showNotification(`Valeur hors limites (0-${zone.max})`, 'warning');
+                vibrate([200, 100, 200]); // Vibration d'erreur
                 return;
             }
 
             console.log(`📤 Envoi mise à jour: ${currentZone} = ${newValue} (${delta > 0 ? '+' : ''}${delta})`);
+            vibrate([100]); // Feedback de succès
             
-            // Envoi au serveur
             socket.emit('update_zone', {
                 zoneId: currentZone,
                 newValue: newValue,
@@ -449,10 +429,8 @@
             updateZoneDisplay(currentZone);
             updateStatsBar();
             
-            // Mise à jour du panneau
             document.getElementById('controlCurrentCount').textContent = newValue;
             
-            // Fermeture automatique si zone vide
             if (newValue === 0) {
                 setTimeout(closeControlPanel, 500);
             }
@@ -484,25 +462,6 @@
         });
 
         // ===========================================
-        // FONCTIONS UTILITAIRES
-        // ===========================================
-
-        function showNotification(message, type = 'info', duration = 4000) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            
-            document.getElementById('notifications').appendChild(notification);
-            
-            setTimeout(() => notification.classList.add('show'), 100);
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => notification.remove(), 300);
-            }, duration);
-        }
-
-        // ===========================================
         // ANIMATIONS CSS ADDITIONNELLES
         // ===========================================
 
@@ -521,7 +480,14 @@
         // ===========================================
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Application de visualisation de salle initialisée');
+            console.log('🚀 Application de visualisation de salle initialisée (version mobile)');
+
+            // Ajout de listeners pour le feedback tactile
+            document.querySelectorAll('.zone, .control-btn').forEach(element => {
+                element.addEventListener('touchstart', () => {
+                    vibrate([30]);
+                }, { passive: true });
+            });
         });
 
         // Gestion de la fermeture de la page
@@ -532,8 +498,18 @@
         // Gestion des erreurs globales
         window.addEventListener('error', (event) => {
             console.error('❌ Erreur JavaScript:', event.error);
-            showNotification('Une erreur inattendue s\'est produite', 'error');
+            vibrate([200, 100, 200]); // Vibration d'erreur
         });
+
+        // Empêcher le zoom sur double-tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>
