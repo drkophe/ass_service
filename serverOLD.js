@@ -6,7 +6,7 @@
  * 2. La visualisation en temps réel des zones de la salle
  * 3. La communication entre les deux systèmes
  * 
- * Configuration Render compatible pour déploiement gratuit
+ * Configuration Railway compatible pour déploiement en ligne
  */
 
 const express = require('express');
@@ -22,28 +22,23 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Configuration Socket.io avec CORS pour Render
+// Configuration Socket.io avec CORS
 const io = socketIo(server, {
     cors: {
         origin: process.env.NODE_ENV === 'production' 
-            ? [
-                /\.onrender\.com$/,  // Permet tous les sous-domaines Render
-                "https://your-app-name.onrender.com" // Remplacez par votre URL Render
-              ]
+            ? ["https://votre-domaine.railway.app"] // À remplacer par votre URL Railway
             : "*", // En développement, autorise tout
         methods: ["GET", "POST"],
         credentials: true
     },
-    transports: ['websocket', 'polling'],
-    allowEIO3: true // Compatibilité étendue
+    transports: ['websocket', 'polling']
 });
 
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configuration du port pour Render
-const PORT = process.env.PORT || 10000; // Render utilise souvent le port 10000
+const PORT = process.env.PORT || 3000;
 
 // ===========================================
 // DONNÉES GLOBALES PARTAGÉES
@@ -92,21 +87,14 @@ app.get('/salle', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'salle.html'));
 });
 
-// API pour récupérer l'état global (utilisé par Render pour le health check)
+// API pour récupérer l'état global
 app.get('/api/status', (req, res) => {
     res.json({
-        status: 'healthy',
         requests: Array.from(requests.values()),
         zones: zones,
         connectedUsers: connectedUsers,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        timestamp: new Date().toISOString()
     });
-});
-
-// Route de santé simple pour Render
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // API pour réinitialiser (développement uniquement)
@@ -494,15 +482,15 @@ setInterval(() => {
 // DÉMARRAGE DU SERVEUR
 // ===========================================
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
     console.log('🚀 ==========================================');
-    console.log(`🚀 Serveur Places & Demandes démarré sur Render`);
+    console.log(`🚀 Serveur Places & Demandes démarré`);
     console.log(`🚀 Port: ${PORT}`);
     console.log(`🚀 Environnement: ${process.env.NODE_ENV || 'development'}`);
     console.log('🚀 ==========================================');
     console.log('📄 Pages disponibles:');
-    console.log(`   • Demandes: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/`);
-    console.log(`   • Salle:    ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/salle`);
+    console.log(`   • Demandes: http://localhost:${PORT}/`);
+    console.log(`   • Salle:    http://localhost:${PORT}/salle`);
     console.log('🚀 ==========================================');
     console.log('📊 État initial:');
     
@@ -517,14 +505,6 @@ server.listen(PORT, '0.0.0.0', () => {
 // Gestion de l'arrêt propre
 process.on('SIGTERM', () => {
     console.log('🛑 Arrêt du serveur...');
-    server.close(() => {
-        console.log('✅ Serveur arrêté proprement');
-        process.exit(0);
-    });
-});
-
-process.on('SIGINT', () => {
-    console.log('🛑 Interruption reçue, arrêt du serveur...');
     server.close(() => {
         console.log('✅ Serveur arrêté proprement');
         process.exit(0);
