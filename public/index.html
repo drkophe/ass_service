@@ -46,7 +46,17 @@
                 <form id="requestForm" class="request-form">
                     <div class="form-group">
                         <label for="userName">Votre nom</label>
-                        <input type="text" id="userName" required placeholder="Entrez votre nom">
+                        <select id="userName" required>
+                            <option value="">Sélectionnez votre nom</option>
+                            <option value="Fabien BOYER">Fabien BOYER</option>
+                            <option value="Sébastien RABIN">Sébastien RABIN</option>
+                            <option value="Marie DUBOIS">Marie DUBOIS</option>
+                            <option value="Pierre MARTIN">Pierre MARTIN</option>
+                            <option value="Sophie BERNARD">Sophie BERNARD</option>
+                            <option value="Thomas PETIT">Thomas PETIT</option>
+                            <option value="Isabelle MOREAU">Isabelle MOREAU</option>
+                            <option value="Nicolas SIMON">Nicolas SIMON</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -78,7 +88,17 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="handlerName">Votre nom *</label>
-                    <input type="text" id="handlerName" required placeholder="Qui traite cette demande ?">
+                    <select id="handlerName" required>
+                        <option value="">Qui traite cette demande ?</option>
+                        <option value="Fabien BOYER">Fabien BOYER</option>
+                        <option value="Sébastien RABIN">Sébastien RABIN</option>
+                        <option value="Marie DUBOIS">Marie DUBOIS</option>
+                        <option value="Pierre MARTIN">Pierre MARTIN</option>
+                        <option value="Sophie BERNARD">Sophie BERNARD</option>
+                        <option value="Thomas PETIT">Thomas PETIT</option>
+                        <option value="Isabelle MOREAU">Isabelle MOREAU</option>
+                        <option value="Nicolas SIMON">Nicolas SIMON</option>
+                    </select>
                 </div>
                 
                 <!-- Choix du type de traitement (visible lors de la prise en charge) -->
@@ -152,6 +172,72 @@
         let zones = {};
         let connectedUsers = 0;
         let currentRequestForZone = null;
+
+        // ===========================================
+        // GESTION DE LA MÉMOIRE UTILISATEUR
+        // ===========================================
+
+        // Fonctions pour sauvegarder/récupérer les noms
+        function saveCreatorName(name) {
+            try {
+                if (name && name.trim()) {
+                    localStorage.setItem('gestion_places_creator_name', name.trim());
+                    console.log('💾 Nom créateur sauvegardé:', name);
+                }
+            } catch (e) {
+                console.warn('Impossible de sauvegarder le nom créateur:', e);
+            }
+        }
+
+        function saveHandlerName(name) {
+            try {
+                if (name && name.trim()) {
+                    localStorage.setItem('gestion_places_handler_name', name.trim());
+                    console.log('💾 Nom gestionnaire sauvegardé:', name);
+                }
+            } catch (e) {
+                console.warn('Impossible de sauvegarder le nom gestionnaire:', e);
+            }
+        }
+
+        function getCreatorName() {
+            try {
+                return localStorage.getItem('gestion_places_creator_name') || '';
+            } catch (e) {
+                console.warn('Impossible de récupérer le nom créateur:', e);
+                return '';
+            }
+        }
+
+        function getHandlerName() {
+            try {
+                return localStorage.getItem('gestion_places_handler_name') || '';
+            } catch (e) {
+                console.warn('Impossible de récupérer le nom gestionnaire:', e);
+                return '';
+            }
+        }
+
+        // Restaurer les noms sauvegardés
+        function restoreUserNames() {
+            const savedCreatorName = getCreatorName();
+            
+            if (savedCreatorName) {
+                document.getElementById('userName').value = savedCreatorName;
+                console.log('🔄 Nom créateur restauré:', savedCreatorName);
+            }
+        }
+
+        // Restaurer le nom du gestionnaire dans la modale
+        function restoreHandlerName() {
+            const savedHandlerName = getHandlerName();
+            
+            if (savedHandlerName) {
+                document.getElementById('handlerName').value = savedHandlerName;
+                console.log('🔄 Nom gestionnaire restauré:', savedHandlerName);
+                updateConfirmButtonState(); // Mettre à jour l'état du bouton
+            }
+        }
 
         // ===========================================
         // FEEDBACK TACTILE (pour mobile)
@@ -269,33 +355,50 @@
         // GESTION DU FORMULAIRE DE DEMANDE
         // ===========================================
 
-        document.getElementById('requestForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                userName: document.getElementById('userName').value.trim(),
-                placesNeeded: parseInt(document.getElementById('placesNeeded').value),
-                comment: document.getElementById('comment').value.trim()
-            };
-            
-            // Validation
-            if (!formData.userName || !formData.placesNeeded) {
-                vibrate([200, 100, 200]); // Vibration d'erreur
-                return;
-            }
-            
-            if (formData.placesNeeded < 1 || formData.placesNeeded > 20) {
-                vibrate([200, 100, 200]); // Vibration d'erreur
-                return;
-            }
-            
-            console.log('📤 Envoi de la demande:', formData);
-            socket.emit('create_request', formData);
-            
-            // Reset du formulaire
-            e.target.reset();
-            vibrate([100]); // Vibration de succès
-        });
+        function setupFormHandler() {
+            const form = document.getElementById('requestForm');
+            if (!form) return;
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                console.log('📝 Tentative de création de demande...');
+                
+                const formData = {
+                    userName: document.getElementById('userName').value.trim(),
+                    placesNeeded: parseInt(document.getElementById('placesNeeded').value),
+                    comment: document.getElementById('comment').value.trim()
+                };
+                
+                console.log('📊 Données formulaire:', formData);
+                
+                // Validation
+                if (!formData.userName || !formData.placesNeeded) {
+                    console.log('❌ Validation échouée: champs manquants');
+                    vibrate([200, 100, 200]); // Vibration d'erreur
+                    return false;
+                }
+                
+                if (formData.placesNeeded < 1 || formData.placesNeeded > 20) {
+                    console.log('❌ Validation échouée: nombre de places invalide');
+                    vibrate([200, 100, 200]); // Vibration d'erreur
+                    return false;
+                }
+                
+                // Sauvegarder le nom du créateur pour les prochaines fois
+                saveCreatorName(formData.userName);
+                
+                console.log('📤 Envoi de la demande:', formData);
+                socket.emit('create_request', formData);
+                
+                // Reset du formulaire (sauf le nom qui reste pré-sélectionné)
+                document.getElementById('placesNeeded').value = '';
+                document.getElementById('comment').value = '';
+                vibrate([100]); // Vibration de succès
+                
+                return false;
+            });
+        }
 
         // ===========================================
         // GESTION DES DEMANDES
@@ -474,6 +577,9 @@
             document.getElementById('confirmZoneBtn').disabled = true;
             document.getElementById('backBtn').style.display = 'none';
             
+            // Restaurer le nom du gestionnaire sauvegardé
+            restoreHandlerName();
+            
             // Reset des sélections
             const treatmentRadios = document.querySelectorAll('input[name="selectedTreatment"]');
             treatmentRadios.forEach(radio => radio.checked = false);
@@ -518,7 +624,7 @@
                 if (currentModalStep === 'treatment') {
                     // Première étape : nom + traitement obligatoires
                     document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedTreatment);
-                } else {
+                } else if (currentModalStep === 'zone') {
                     // Deuxième étape : zone obligatoire (nom déjà validé)
                     document.getElementById('confirmZoneBtn').disabled = !selectedZone;
                 }
@@ -607,9 +713,10 @@
             onZoneSelected();
         }
 
-        function closeZoneModal() {
+        function closeZoneModal(isAbandon = true) {
             // Vérifier si on est en train d'abandonner une demande en cours de traitement
-            if (currentRequestForZone && currentRequestForZone.action === 'process-request') {
+            // Seulement si c'est un abandon volontaire (clic sur la croix)
+            if (isAbandon && currentRequestForZone && currentRequestForZone.action === 'process-request') {
                 const request = currentRequests.get(currentRequestForZone.requestId);
                 if (request && request.status === 'in-progress') {
                     // Demander confirmation avant d'abandonner
@@ -630,14 +737,7 @@
         }
 
         function onZoneSelected() {
-            const handlerName = document.getElementById('handlerName').value.trim();
-            const selectedZone = document.querySelector('input[name="selectedZone"]:checked');
-            
-            if (currentRequestForZone?.action === 'process-request' && !currentRequestForZone.targetStatus) {
-                document.getElementById('confirmZoneBtn').disabled = !handlerName;
-            } else {
-                document.getElementById('confirmZoneBtn').disabled = !(handlerName && selectedZone);
-            }
+            updateConfirmButtonState();
         }
 
         function confirmZoneAssignment() {
@@ -646,13 +746,57 @@
             const handlerName = document.getElementById('handlerName').value.trim();
             if (!handlerName) return;
             
-            if (currentRequestForZone.action === 'process-request' && !currentRequestForZone.targetStatus) {
-                return;
+            // Sauvegarder le nom du gestionnaire pour les prochaines fois
+            saveHandlerName(handlerName);
+            
+            // Si on est dans le processus de traitement d'une demande
+            if (currentRequestForZone.action === 'process-request') {
+                if (currentModalStep === 'treatment') {
+                    // ÉTAPE 1 : Récupérer le traitement sélectionné et passer à l'étape 2
+                    const selectedTreatment = document.querySelector('input[name="selectedTreatment"]:checked')?.value;
+                    if (!selectedTreatment) return;
+                    
+                    // Assigner le type de traitement
+                    currentRequestForZone.targetStatus = selectedTreatment;
+                    
+                    // Passer à l'étape 2 : sélection de zone
+                    currentModalStep = 'zone';
+                    document.getElementById('treatmentChoice').style.display = 'none';
+                    
+                    const request = currentRequests.get(currentRequestForZone.requestId);
+                    showZoneSelection(request, selectedTreatment);
+                    
+                    // Mettre à jour les éléments de la modale
+                    document.getElementById('confirmZoneBtn').textContent = '✅ Confirmer l\'attribution';
+                    document.getElementById('backBtn').style.display = 'inline-block';
+                    document.getElementById('modalTitle').textContent = '🎯 Sélectionner la zone';
+                    
+                    updateConfirmButtonState();
+                    vibrate([50]); // Feedback tactile
+                    
+                } else if (currentModalStep === 'zone') {
+                    // ÉTAPE 2 : Valider la zone sélectionnée
+                    const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
+                    if (!selectedZone) return;
+                    
+                    console.log('🎯 Attribution finale:', currentRequestForZone.requestId, selectedZone, handlerName);
+                    
+                    socket.emit('update_request_status', {
+                        requestId: currentRequestForZone.requestId,
+                        status: currentRequestForZone.targetStatus,
+                        assignedZone: selectedZone,
+                        handledByName: handlerName
+                    });
+                    
+                    vibrate([100, 50, 100]); // Feedback de confirmation
+                    closeZoneModal(false); // false = pas un abandon, juste une fermeture après confirmation
+                }
             } else {
+                // Mode attribution directe (ancienne logique conservée)
                 const selectedZone = document.querySelector('input[name="selectedZone"]:checked')?.value;
                 if (!selectedZone) return;
                 
-                console.log('🎯 Attribution finale:', currentRequestForZone.requestId, selectedZone, handlerName);
+                console.log('🎯 Attribution directe:', currentRequestForZone.requestId, selectedZone, handlerName);
                 
                 socket.emit('update_request_status', {
                     requestId: currentRequestForZone.requestId,
@@ -662,7 +806,7 @@
                 });
                 
                 vibrate([100, 50, 100]); // Feedback de confirmation
-                closeZoneModal();
+                closeZoneModal(false); // false = pas un abandon, juste une fermeture après confirmation
             }
         }
 
@@ -700,14 +844,27 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Application des demandes initialisée (version mobile)');
             
-            // Pré-remplissage pour les tests
-            const randomNames = ['Alice Martin', 'Bob Dupont', 'Claire Bernard', 'David Moreau'];
-            document.getElementById('userName').value = 
-                randomNames[Math.floor(Math.random() * randomNames.length)];
+            // Configuration du gestionnaire de formulaire
+            setupFormHandler();
+            
+            // Restaurer les noms sauvegardés de l'utilisateur
+            restoreUserNames();
+            
+            // Listener pour sauvegarder immédiatement le nom du créateur quand il change
+            const userNameSelect = document.getElementById('userName');
+            if (userNameSelect) {
+                userNameSelect.addEventListener('change', function(e) {
+                    const selectedName = e.target.value.trim();
+                    if (selectedName) {
+                        saveCreatorName(selectedName);
+                        console.log('🎯 Nom créateur sélectionné:', selectedName);
+                    }
+                });
+            }
             
             const handlerNameInput = document.getElementById('handlerName');
             if (handlerNameInput) {
-                handlerNameInput.addEventListener('input', updateConfirmButtonState);
+                handlerNameInput.addEventListener('change', updateConfirmButtonState);
             }
 
             // Ajout de listeners pour le feedback tactile
