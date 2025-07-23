@@ -38,11 +38,11 @@ input, textarea {
 
 .container {
     max-width: 1400px;
-    min-height: 100vh;
+    /* min-height: 100vh; */
     margin: 0 auto;
     background: white;
     box-shadow: 0 0 30px rgba(0,0,0,0.1);
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 /* ===========================================
@@ -1230,8 +1230,8 @@ nav {
 }
 
 #body-index {
-    overflow: hidden;
-    position: fixed;
+    /* overflow: hidden; */
+    /* position: fixed; */
     width: 100%;
     height: 100%;
     /* Ajuster pour la navigation en bas */
