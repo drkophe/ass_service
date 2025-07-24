@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Gestion des Places - Planning</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav>
+        <div class="navigation">
+            <a href="/" class="nav-link">Demandes</a>
+            <a href="/salle" class="nav-link">Salle</a>
+            <a href="/planning" class="nav-link active">Planning</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <!-- En-tête avec sélection utilisateur et jour -->
+        <div class="planning-header">
+            <div class="planning-controls">
+                <div class="user-selector">
+                    <label for="userFilter">Utilisateur :</label>
+                    <select id="userFilter" onchange="filterByUser()">
+                        <option value="all">Tous les utilisateurs</option>
+                        <option value="Fabien BOYER">Fabien BOYER</option>
+                        <option value="Sébastien RABIN">Sébastien RABIN</option>
+                        <option value="Marie DUBOIS">Marie DUBOIS</option>
+                        <option value="Pierre MARTIN">Pierre MARTIN</option>
+                        <option value="Sophie BERNARD">Sophie BERNARD</option>
+                        <option value="Thomas PETIT">Thomas PETIT</option>
+                        <option value="Isabelle MOREAU">Isabelle MOREAU</option>
+                        <option value="Nicolas SIMON">Nicolas SIMON</option>
+                    </select>
+                </div>
+                
+                <div class="day-selector">
+                    <button class="day-btn active" onclick="selectDay('vendredi')">Vendredi</button>
+                    <button class="day-btn" onclick="selectDay('samedi')">Samedi</button>
+                    <button class="day-btn" onclick="selectDay('dimanche')">Dimanche</button>
+                </div>
+                
+                <button class="btn btn-admin" onclick="openAdminModal()">🔐 Admin</button>
+            </div>
+        </div>
+        
+        <!-- Légende des services -->
+        <div class="services-legend">
+            <h3>📋 Services</h3>
+            <div class="services-list">
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #3498db;"></span>
+                    <span>Accueil Porte 1</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #2ecc71;"></span>
+                    <span>Accueil Porte 2</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #f39c12;"></span>
+                    <span>Accueil Porte 3</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #9b59b6;"></span>
+                    <span>Placement</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #e74c3c;"></span>
+                    <span>Ronde Extérieur</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #f1c40f;"></span>
+                    <span>Surveillance Sécurité Incendie</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-color" style="background-color: #e91e63;"></span>
+                    <span>Podium</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Planning principal -->
+        <div class="planning-container">
+            <div class="planning-grid" id="planningGrid">
+                <!-- Le planning sera généré dynamiquement ici -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Admin -->
+    <div class="modal-overlay" id="adminModalOverlay" onclick="closeAdminModal()">
+        <div class="modal admin-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>🔐 Administration du Planning</h3>
+                <button class="btn-close" onclick="closeAdminModal()">✖</button>
+            </div>
+            <div class="modal-body" id="adminModalBody">
+                <!-- Formulaire de connexion -->
+                <div id="adminLogin">
+                    <div class="form-group">
+                        <label for="adminPassword">Mot de passe administrateur</label>
+                        <input type="password" id="adminPassword" placeholder="Entrez le mot de passe">
+                    </div>
+                    <button class="btn btn-primary" onclick="adminLogin()">Se connecter</button>
+                </div>
+                
+                <!-- Interface d'édition (cachée par défaut) -->
+                <div id="adminInterface" style="display: none;">
+                    <div class="admin-controls">
+                        <h4>Ajouter/Modifier une affectation</h4>
+                        
+                        <div class="form-group">
+                            <label>Jour</label>
+                            <select id="adminDay">
+                                <option value="vendredi">Vendredi</option>
+                                <option value="samedi">Samedi</option>
+                                <option value="dimanche">Dimanche</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Utilisateur</label>
+                            <select id="adminUser">
+                                <option value="">Sélectionner un utilisateur</option>
+                                <option value="Fabien BOYER">Fabien BOYER</option>
+                                <option value="Sébastien RABIN">Sébastien RABIN</option>
+                                <option value="Marie DUBOIS">Marie DUBOIS</option>
+                                <option value="Pierre MARTIN">Pierre MARTIN</option>
+                                <option value="Sophie BERNARD">Sophie BERNARD</option>
+                                <option value="Thomas PETIT">Thomas PETIT</option>
+                                <option value="Isabelle MOREAU">Isabelle MOREAU</option>
+                                <option value="Nicolas SIMON">Nicolas SIMON</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Service</label>
+                            <select id="adminService">
+                                <option value="">Sélectionner un service</option>
+                                <option value="accueil-porte-1">Accueil Porte 1</option>
+                                <option value="accueil-porte-2">Accueil Porte 2</option>
+                                <option value="accueil-porte-3">Accueil Porte 3</option>
+                                <option value="placement">Placement</option>
+                                <option value="ronde-exterieur">Ronde Extérieur</option>
+                                <option value="surveillance-securite">Surveillance Sécurité Incendie</option>
+                                <option value="podium">Podium</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Heure de début</label>
+                            <input type="time" id="adminStartTime" min="07:00" max="23:00" step="1800">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Heure de fin</label>
+                            <input type="time" id="adminEndTime" min="07:00" max="23:30" step="1800">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="addAssignment()">➕ Ajouter l'affectation</button>
+                    </div>
+                    
+                    <div class="current-assignments">
+                        <h4>Affectations actuelles</h4>
+                        <div id="assignmentsList">
+                            <!-- Liste des affectations -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================================
+        // CONFIGURATION ET VARIABLES GLOBALES
+        // ===========================================
+        
+        const socket = io({
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 20000
+        });
+
+        let planningData = {
+            vendredi: [],
+            samedi: [],
+            dimanche: []
+        };
+        
+        let currentDay = 'vendredi';
+        let currentUser = 'all';
+        let isAdmin = false;
+        
+        const serviceColors = {
+            'accueil-porte-1': '#3498db',
+            'accueil-porte-2': '#2ecc71',
+            'accueil-porte-3': '#f39c12',
+            'placement': '#9b59b6',
+            'ronde-exterieur': '#e74c3c',
+            'surveillance-securite': '#f1c40f',
+            'podium': '#e91e63'
+        };
+        
+        const serviceNames = {
+            'accueil-porte-1': 'Accueil Porte 1',
+            'accueil-porte-2': 'Accueil Porte 2',
+            'accueil-porte-3': 'Accueil Porte 3',
+            'placement': 'Placement',
+            'ronde-exterieur': 'Ronde Extérieur',
+            'surveillance-securite': 'Surveillance Sécurité Incendie',
+            'podium': 'Podium'
+        };
+
+        // ===========================================
+        // FEEDBACK TACTILE
+        // ===========================================
+        
+        function vibrate(pattern = [50]) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        // ===========================================
+        // GESTION DES CONNEXIONS SOCKET.IO
+        // ===========================================
+        
+        socket.on('connect', () => {
+            console.log('✅ Connecté au serveur');
+            socket.emit('request_planning_data');
+        });
+        
+        socket.on('planning_data', (data) => {
+            console.log('📥 Données planning reçues', data);
+            planningData = data;
+            updatePlanning();
+        });
+        
+        socket.on('planning_updated', (data) => {
+            console.log('🔄 Planning mis à jour', data);
+            planningData = data;
+            updatePlanning();
+            vibrate([50]);
+        });
+        
+        socket.on('assignment_added', (data) => {
+            console.log('➕ Affectation ajoutée', data);
+            vibrate([100]);
+            if (isAdmin) {
+                loadAssignments();
+            }
+        });
+        
+        socket.on('assignment_deleted', (data) => {
+            console.log('🗑️ Affectation supprimée', data);
+            vibrate([50]);
+            if (isAdmin) {
+                loadAssignments();
+            }
+        });
+
+        // ===========================================
+        // FONCTIONS D'INTERFACE
+        // ===========================================
+        
+        function selectDay(day) {
+            currentDay = day;
+            
+            // Mise à jour des boutons
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updatePlanning();
+            vibrate([30]);
+        }
+        
+        function filterByUser() {
+            currentUser = document.getElementById('userFilter').value;
+            updatePlanning();
+            vibrate([30]);
+        }
+        
+        function updatePlanning() {
+            const grid = document.getElementById('planningGrid');
+            grid.innerHTML = '';
+            
+            // Créer les heures de 7h à 23h
+            const hours = [];
+            for (let h = 7; h <= 23; h++) {
+                hours.push(`${h}:00`);
+                hours.push(`${h}:30`);
+            }
+            
+            // Créer l'en-tête avec les heures
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'planning-header-row';
+            headerDiv.innerHTML = '<div class="time-header">Horaires</div>';
+            hours.forEach(hour => {
+                const hourDiv = document.createElement('div');
+                hourDiv.className = 'hour-header';
+                hourDiv.textContent = hour;
+                headerDiv.appendChild(hourDiv);
+            });
+            grid.appendChild(headerDiv);
+            
+            // Récupérer les données du jour actuel
+            const dayData = planningData[currentDay] || [];
+            
+            // Filtrer par utilisateur si nécessaire
+            let users = currentUser === 'all' 
+                ? ['Fabien BOYER', 'Sébastien RABIN', 'Marie DUBOIS', 'Pierre MARTIN', 
+                   'Sophie BERNARD', 'Thomas PETIT', 'Isabelle MOREAU', 'Nicolas SIMON']
+                : [currentUser];
+            
+            // Créer une ligne par utilisateur
+            users.forEach(user => {
+                const userAssignments = dayData.filter(a => a.user === user);
+                
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'planning-row';
+                
+                // Nom de l'utilisateur
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-name';
+                userDiv.textContent = user;
+                rowDiv.appendChild(userDiv);
+                
+                // Créer les créneaux
+                hours.forEach((hour, index) => {
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'time-slot';
+                    slotDiv.dataset.hour = hour;
+                    slotDiv.dataset.user = user;
+                    
+                    // Vérifier si il y a une affectation pour ce créneau
+                    const assignment = userAssignments.find(a => {
+                        const startIndex = hours.indexOf(a.startTime);
+                        const endIndex = hours.indexOf(a.endTime);
+                        return index >= startIndex && index < endIndex;
+                    });
+                    
+                    if (assignment) {
+                        const startIndex = hours.indexOf(assignment.startTime);
+                        if (index === startIndex) {
+                            // Début d'une affectation
+                            const duration = hours.indexOf(assignment.endTime) - startIndex;
+                            slotDiv.className = 'assignment-block';
+                            slotDiv.style.gridColumn = `span ${duration}`;
+                            slotDiv.style.backgroundColor = serviceColors[assignment.service];
+                            slotDiv.innerHTML = `
+                                <div class="assignment-content">
+                                    <div class="assignment-service">${serviceNames[assignment.service]}</div>
+                                    <div class="assignment-time">${assignment.startTime} - ${assignment.endTime}</div>
+                                </div>
+                            `;
+                        } else {
+                            // Créneau occupé par une affectation précédente
+                            slotDiv.style.display = 'none';
+                        }
+                    }
+                    
+                    rowDiv.appendChild(slotDiv);
+                });
+                
+                grid.appendChild(rowDiv);
+            });
+        }
+
+        // ===========================================
+        // FONCTIONS ADMIN
+        // ===========================================
+        
+        function openAdminModal() {
+            document.getElementById('adminModalOverlay').style.display = 'flex';
+            vibrate([50]);
+        }
+        
+        function closeAdminModal() {
+            document.getElementById('adminModalOverlay').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+            vibrate([30]);
+        }
+        
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === 'admin123') { // Mot de passe simple pour la démo
+                isAdmin = true;
+                document.getElementById('adminLogin').style.display = 'none';
+                document.getElementById('adminInterface').style.display = 'block';
+                loadAssignments();
+                vibrate([100]);
+            } else {
+                alert('Mot de passe incorrect');
+                vibrate([200, 100, 200]);
+            }
+        }
+        
+        function addAssignment() {
+            const day = document.getElementById('adminDay').value;
+            const user = document.getElementById('adminUser').value;
+            const service = document.getElementById('adminService').value;
+            const startTime = document.getElementById('adminStartTime').value;
+            const endTime = document.getElementById('adminEndTime').value;
+            
+            if (!user || !service || !startTime || !endTime) {
+                alert('Veuillez remplir tous les champs');
+                vibrate([200, 100, 200]);
+                return;
+            }
+            
+            if (startTime >= endTime) {
+                alert('L\'heure de fin doit être après l\'heure de début');
+                vibrate([200, 100, 200]);
+                return;
+            }
+            
+            const assignment = {
+                day,
+                user,
+                service,
+                startTime,
+                endTime
+            };
+            
+            socket.emit('add_assignment', assignment);
+            
+            // Reset du formulaire
+            document.getElementById('adminUser').value = '';
+            document.getElementById('adminService').value = '';
+            document.getElementById('adminStartTime').value = '';
+            document.getElementById('adminEndTime').value = '';
+            
+            vibrate([100]);
+        }
+        
+        function deleteAssignment(assignmentId) {
+            if (confirm('Supprimer cette affectation ?')) {
+                socket.emit('delete_assignment', { id: assignmentId });
+                vibrate([100]);
+            }
+        }
+        
+        function loadAssignments() {
+            const list = document.getElementById('assignmentsList');
+            list.innerHTML = '';
+            
+            Object.entries(planningData).forEach(([day, assignments]) => {
+                if (assignments.length > 0) {
+                    const dayHeader = document.createElement('h5');
+                    dayHeader.textContent = day.charAt(0).toUpperCase() + day.slice(1);
+                    dayHeader.style.marginTop = '16px';
+                    list.appendChild(dayHeader);
+                    
+                    assignments.forEach(assignment => {
+                        const item = document.createElement('div');
+                        item.className = 'assignment-item';
+                        item.innerHTML = `
+                            <div class="assignment-info">
+                                <strong>${assignment.user}</strong> - 
+                                ${serviceNames[assignment.service]} 
+                                (${assignment.startTime} - ${assignment.endTime})
+                            </div>
+                            <button class="btn btn-danger btn-small" onclick="deleteAssignment('${assignment.id}')">
+                                🗑️
+                            </button>
+                        `;
+                        list.appendChild(item);
+                    });
+                }
+            });
+        }
+
+        // ===========================================
+        // INITIALISATION
+        // ===========================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Application Planning initialisée');
+            
+            // Demander les données au serveur
+            if (socket.connected) {
+                socket.emit('request_planning_data');
+            }
+            
+            // Ajouter le feedback tactile
+            document.querySelectorAll('.btn, .day-btn').forEach(element => {
+                element.addEventListener('touchstart', () => {
+                    vibrate([30]);
+                }, { passive: true });
+            });
+        });
+        
+        // Empêcher le zoom sur double-tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>

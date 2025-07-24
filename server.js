@@ -10,6 +10,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const fs = require('fs').promises;
 
 // ===========================================
 // CONFIGURATION DU SERVEUR
@@ -63,6 +64,40 @@ let connectedUsers = 0;
 let userCounter = 0;
 
 // ===========================================
+// DONNÉES DU PLANNING
+// ===========================================
+
+let planningData = {
+    vendredi: [],
+    samedi: [],
+    dimanche: []
+};
+
+const PLANNING_FILE = 'planning-data.json';
+
+// Charger les données du planning au démarrage
+async function loadPlanningData() {
+    try {
+        const data = await fs.readFile(PLANNING_FILE, 'utf8');
+        planningData = JSON.parse(data);
+        console.log('📅 Données du planning chargées');
+    } catch (error) {
+        console.log('📅 Aucune donnée de planning trouvée, création d\'un nouveau fichier');
+        await savePlanningData();
+    }
+}
+
+// Sauvegarder les données du planning
+async function savePlanningData() {
+    try {
+        await fs.writeFile(PLANNING_FILE, JSON.stringify(planningData, null, 2));
+        console.log('💾 Données du planning sauvegardées');
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde planning:', error);
+    }
+}
+
+// ===========================================
 // ROUTES EXPRESS
 // ===========================================
 
@@ -72,6 +107,10 @@ app.get('/', (req, res) => {
 
 app.get('/salle', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'salle.html'));
+});
+
+app.get('/planning', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'planning.html'));
 });
 
 app.get('/api/status', (req, res) => {
@@ -406,6 +445,112 @@ io.on('connection', (socket) => {
     });
     
     // ===========================================
+    // GESTION DU PLANNING
+    // ===========================================
+    
+    socket.on('request_planning_data', () => {
+        socket.emit('planning_data', planningData);
+    });
+    
+    socket.on('add_assignment', async (assignment) => {
+        try {
+            // Validation des données
+            if (!assignment.day || !assignment.user || !assignment.service || 
+                !assignment.startTime || !assignment.endTime) {
+                socket.emit('error', 'Données d\'affectation invalides');
+                return;
+            }
+            
+            // Ajouter un ID unique
+            assignment.id = uuidv4();
+            
+            // Vérifier les conflits
+            const dayAssignments = planningData[assignment.day] || [];
+            const hasConflict = dayAssignments.some(a => {
+                if (a.user !== assignment.user) return false;
+                
+                // Convertir les heures en minutes pour faciliter la comparaison
+                const toMinutes = (time) => {
+                    const [h, m] = time.split(':').map(Number);
+                    return h * 60 + m;
+                };
+                
+                const newStart = toMinutes(assignment.startTime);
+                const newEnd = toMinutes(assignment.endTime);
+                const existingStart = toMinutes(a.startTime);
+                const existingEnd = toMinutes(a.endTime);
+                
+                // Vérifier le chevauchement
+                return (newStart < existingEnd && newEnd > existingStart);
+            });
+            
+            if (hasConflict) {
+                socket.emit('error', 'Conflit d\'horaire : l\'utilisateur est déjà affecté sur ce créneau');
+                return;
+            }
+            
+            // Ajouter l'affectation
+            if (!planningData[assignment.day]) {
+                planningData[assignment.day] = [];
+            }
+            planningData[assignment.day].push(assignment);
+            
+            // Trier par heure de début
+            planningData[assignment.day].sort((a, b) => {
+                return a.startTime.localeCompare(b.startTime);
+            });
+            
+            // Sauvegarder
+            await savePlanningData();
+            
+            console.log(`📅 Nouvelle affectation: ${assignment.user} - ${assignment.service}`);
+            
+            // Notifier tous les clients
+            io.emit('planning_updated', planningData);
+            io.emit('assignment_added', assignment);
+            
+        } catch (error) {
+            console.error('❌ Erreur ajout affectation:', error);
+            socket.emit('error', 'Erreur lors de l\'ajout');
+        }
+    });
+    
+    socket.on('delete_assignment', async (data) => {
+        try {
+            const { id } = data;
+            let found = false;
+            
+            // Parcourir tous les jours pour trouver et supprimer l'affectation
+            for (const day of Object.keys(planningData)) {
+                const index = planningData[day].findIndex(a => a.id === id);
+                if (index !== -1) {
+                    planningData[day].splice(index, 1);
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                socket.emit('error', 'Affectation introuvable');
+                return;
+            }
+            
+            // Sauvegarder
+            await savePlanningData();
+            
+            console.log(`🗑️ Affectation supprimée: ${id}`);
+            
+            // Notifier tous les clients
+            io.emit('planning_updated', planningData);
+            io.emit('assignment_deleted', { id });
+            
+        } catch (error) {
+            console.error('❌ Erreur suppression affectation:', error);
+            socket.emit('error', 'Erreur lors de la suppression');
+        }
+    });
+    
+    // ===========================================
     // GESTION DE LA DÉCONNEXION
     // ===========================================
     
@@ -475,6 +620,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('📄 Pages disponibles:');
     console.log(`   • Demandes: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/`);
     console.log(`   • Salle:    ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/salle`);
+    console.log(`   • Planning: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/planning`);
     console.log('🚀 ==========================================');
     console.log('📊 État initial:');
     
@@ -484,6 +630,11 @@ server.listen(PORT, '0.0.0.0', () => {
     
     console.log('🚀 ==========================================');
     console.log('✅ Serveur prêt à accepter les connexions');
+});
+
+// Charger les données du planning au démarrage
+loadPlanningData().then(() => {
+    console.log('📅 Module planning initialisé');
 });
 
 process.on('SIGTERM', () => {
