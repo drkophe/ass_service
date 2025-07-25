@@ -1,0 +1,14 @@
+{
+  "vendredi": [
+    {
+      "day": "vendredi",
+      "user": "Fabien BOYER",
+      "service": "accueil-porte-1",
+      "startTime": "12:30",
+      "endTime": "13:30",
+      "id": "a07691f5-45d0-4f3d-a837-189ee0030ead"
+    }
+  ],
+  "samedi": [],
+  "dimanche": []
+}

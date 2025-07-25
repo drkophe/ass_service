@@ -43,5 +43,5 @@ coverage/
 # Railway
 .railway/
 
-# Fichiers de données de l'application
-planning-data.json
+# # Fichiers de données de l'application
+# planning-data.json
