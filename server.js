@@ -2,7 +2,7 @@
  * SERVEUR UNIFIÉ - GESTION DES PLACES ET DEMANDES
  * 
  * Version optimisée mobile sans notifications
- * Configuration Render compatible pour déploiement gratuit
+ * Configuration Render compatible avec PostgreSQL
  */
 
 const express = require('express');
@@ -11,6 +11,15 @@ const socketIo = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs').promises;
+
+// PostgreSQL - Vérifier si le module est installé
+let Pool;
+try {
+    Pool = require('pg').Pool;
+} catch (error) {
+    console.log('⚠️  Module pg non installé. Exécutez: npm install pg');
+    console.log('   Les données seront stockées en mémoire/fichier uniquement.');
+}
 
 // ===========================================
 // CONFIGURATION DU SERVEUR
@@ -34,6 +43,17 @@ const io = socketIo(server, {
     transports: ['websocket', 'polling'],
     allowEIO3: true
 });
+
+// Configuration PostgreSQL
+let pool = null;
+if (process.env.DATABASE_URL && Pool) {
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' 
+            ? { rejectUnauthorized: false } 
+            : false
+    });
+}
 
 // Middleware
 app.use(express.json());
@@ -75,23 +95,107 @@ let planningData = {
 
 const PLANNING_FILE = 'planning-data.json';
 
+// Initialiser la base de données PostgreSQL
+async function initDatabase() {
+    if (!pool) return;
+    
+    try {
+        // Créer la table si elle n'existe pas
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS planning (
+                id SERIAL PRIMARY KEY,
+                day VARCHAR(20) UNIQUE,
+                assignments JSONB DEFAULT '[]'
+            )
+        `);
+        
+        // Insérer les jours s'ils n'existent pas
+        const days = ['vendredi', 'samedi', 'dimanche'];
+        for (const day of days) {
+            await pool.query(`
+                INSERT INTO planning (day, assignments) 
+                VALUES ($1, '[]') 
+                ON CONFLICT (day) DO NOTHING
+            `, [day]);
+        }
+        
+        console.log('✅ Base de données PostgreSQL initialisée');
+    } catch (error) {
+        console.error('❌ Erreur initialisation DB:', error);
+    }
+}
+
 // Charger les données du planning au démarrage
 async function loadPlanningData() {
     try {
-        const data = await fs.readFile(PLANNING_FILE, 'utf8');
-        planningData = JSON.parse(data);
-        console.log('📅 Données du planning chargées');
+        // Si PostgreSQL est disponible
+        if (pool) {
+            const result = await pool.query('SELECT day, assignments FROM planning');
+            
+            const planning = {
+                vendredi: [],
+                samedi: [],
+                dimanche: []
+            };
+            
+            result.rows.forEach(row => {
+                planning[row.day] = row.assignments || [];
+            });
+            
+            planningData = planning;
+            console.log('📅 Données du planning chargées depuis PostgreSQL');
+            return;
+        }
+        
+        // Sinon, essayer de charger depuis le fichier (développement)
+        if (process.env.NODE_ENV !== 'production') {
+            try {
+                const data = await fs.readFile(PLANNING_FILE, 'utf8');
+                planningData = JSON.parse(data);
+                console.log('📅 Données du planning chargées depuis le fichier');
+            } catch (error) {
+                console.log('📅 Aucune donnée de planning trouvée, utilisation de données vides');
+                await savePlanningData();
+            }
+        } else {
+            console.log('📅 Mode production sans DB : données en mémoire uniquement');
+        }
     } catch (error) {
-        console.log('📅 Aucune donnée de planning trouvée, création d\'un nouveau fichier');
-        await savePlanningData();
+        console.error('❌ Erreur chargement planning:', error);
+        // Utiliser des données vides en cas d'erreur
+        planningData = {
+            vendredi: [],
+            samedi: [],
+            dimanche: []
+        };
     }
 }
 
 // Sauvegarder les données du planning
 async function savePlanningData() {
     try {
-        await fs.writeFile(PLANNING_FILE, JSON.stringify(planningData, null, 2));
-        console.log('💾 Données du planning sauvegardées');
+        // Si PostgreSQL est disponible
+        if (pool) {
+            // Sauvegarder chaque jour
+            for (const [day, assignments] of Object.entries(planningData)) {
+                await pool.query(`
+                    UPDATE planning 
+                    SET assignments = $1 
+                    WHERE day = $2
+                `, [JSON.stringify(assignments), day]);
+            }
+            
+            console.log('💾 Données du planning sauvegardées dans PostgreSQL');
+            return;
+        }
+        
+        // Sinon, sauvegarder dans le fichier (développement uniquement)
+        if (process.env.NODE_ENV !== 'production') {
+            await fs.writeFile(PLANNING_FILE, JSON.stringify(planningData, null, 2));
+            console.log('💾 Données du planning sauvegardées sur le disque');
+        } else {
+            console.log('📅 Mode production sans DB : sauvegarde désactivée (données en mémoire uniquement)');
+        }
     } catch (error) {
         console.error('❌ Erreur sauvegarde planning:', error);
     }
@@ -449,7 +553,13 @@ io.on('connection', (socket) => {
     // ===========================================
     
     socket.on('request_planning_data', () => {
-        socket.emit('planning_data', planningData);
+        const hasDatabase = !!pool;
+        const responseData = {
+            planning: planningData,
+            isProduction: process.env.NODE_ENV === 'production',
+            hasDatabase: hasDatabase
+        };
+        socket.emit('planning_data', responseData);
     });
     
     socket.on('add_assignment', async (assignment) => {
@@ -506,7 +616,13 @@ io.on('connection', (socket) => {
             console.log(`📅 Nouvelle affectation: ${assignment.user} - ${assignment.service}`);
             
             // Notifier tous les clients
-            io.emit('planning_updated', planningData);
+            const hasDatabase = !!pool;
+            const responseData = {
+                planning: planningData,
+                isProduction: process.env.NODE_ENV === 'production',
+                hasDatabase: hasDatabase
+            };
+            io.emit('planning_updated', responseData);
             io.emit('assignment_added', assignment);
             
         } catch (error) {
@@ -541,7 +657,13 @@ io.on('connection', (socket) => {
             console.log(`🗑️ Affectation supprimée: ${id}`);
             
             // Notifier tous les clients
-            io.emit('planning_updated', planningData);
+            const hasDatabase = !!pool;
+            const responseData = {
+                planning: planningData,
+                isProduction: process.env.NODE_ENV === 'production',
+                hasDatabase: hasDatabase
+            };
+            io.emit('planning_updated', responseData);
             io.emit('assignment_deleted', { id });
             
         } catch (error) {
@@ -611,11 +733,28 @@ setInterval(() => {
 // DÉMARRAGE DU SERVEUR
 // ===========================================
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
     console.log('🚀 ==========================================');
     console.log(`🚀 Serveur Places & Demandes démarré (Mobile Optimized)`);
     console.log(`🚀 Port: ${PORT}`);
     console.log(`🚀 Environnement: ${process.env.NODE_ENV || 'development'}`);
+    console.log('🚀 ==========================================');
+    
+    // Initialiser PostgreSQL si disponible
+    if (pool) {
+        try {
+            await initDatabase();
+            console.log('🐘 PostgreSQL connecté avec succès');
+        } catch (error) {
+            console.error('❌ Erreur connexion PostgreSQL:', error);
+        }
+    } else {
+        console.log('⚠️  Pas de DATABASE_URL : données en mémoire uniquement');
+    }
+    
+    // Charger les données du planning
+    await loadPlanningData();
+    
     console.log('🚀 ==========================================');
     console.log('📄 Pages disponibles:');
     console.log(`   • Demandes: ${process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`}/`);
@@ -632,21 +771,26 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('✅ Serveur prêt à accepter les connexions');
 });
 
-// Charger les données du planning au démarrage
-loadPlanningData().then(() => {
-    console.log('📅 Module planning initialisé');
-});
+// Fermer la connexion PostgreSQL proprement
+async function cleanup() {
+    if (pool) {
+        await pool.end();
+        console.log('🐘 Connexion PostgreSQL fermée');
+    }
+}
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
     console.log('🛑 Arrêt du serveur...');
+    await cleanup();
     server.close(() => {
         console.log('✅ Serveur arrêté proprement');
         process.exit(0);
     });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('🛑 Interruption reçue, arrêt du serveur...');
+    await cleanup();
     server.close(() => {
         console.log('✅ Serveur arrêté proprement');
         process.exit(0);

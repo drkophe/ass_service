@@ -1,7 +1,7 @@
 {
   "name": "gestion-places-unifiee",
   "version": "1.0.0",
-  "description": "Application de gestion des places et demandes en temps réel avec Socket.io",
+  "description": "Application de gestion des places et demandes en temps réel avec Socket.io et PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,12 +15,14 @@
     "demandes",
     "collaboration",
     "express",
-    "nodejs"
+    "nodejs",
+    "postgresql"
   ],
   "author": "Votre Nom",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
+    "pg": "^8.16.3",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
   },

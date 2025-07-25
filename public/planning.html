@@ -86,6 +86,11 @@
                 <!-- Le planning sera généré dynamiquement ici -->
             </div>
         </div>
+        
+        <!-- Avertissement pour la production -->
+        <div id="productionWarning" class="production-warning" style="display: none;">
+            <p>⚠️ <strong>Mode production</strong> : Les données du planning sont stockées temporairement en mémoire et seront perdues au prochain redémarrage du serveur.</p>
+        </div>
     </div>
     
     <!-- Modal Admin -->
@@ -193,6 +198,7 @@
         let currentDay = 'vendredi';
         let currentUser = 'all';
         let isAdmin = false;
+        let isProduction = false;
         
         const serviceColors = {
             'accueil-porte-1': '#3498db',
@@ -235,13 +241,36 @@
         
         socket.on('planning_data', (data) => {
             console.log('📥 Données planning reçues', data);
-            planningData = data;
+            
+            // Gérer le nouveau format de données
+            if (data.planning) {
+                planningData = data.planning;
+                isProduction = data.isProduction || false;
+                
+                // Afficher l'avertissement seulement si en production sans DB
+                if (data.isProduction && !data.hasDatabase) {
+                    document.getElementById('productionWarning').style.display = 'block';
+                } else {
+                    document.getElementById('productionWarning').style.display = 'none';
+                }
+            } else {
+                // Format ancien (compatibilité)
+                planningData = data;
+            }
+            
             updatePlanning();
         });
         
         socket.on('planning_updated', (data) => {
             console.log('🔄 Planning mis à jour', data);
-            planningData = data;
+            
+            // Gérer le nouveau format de données
+            if (data.planning) {
+                planningData = data.planning;
+            } else {
+                planningData = data;
+            }
+            
             updatePlanning();
             vibrate([50]);
         });
