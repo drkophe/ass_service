@@ -1520,6 +1520,12 @@ nav {
     color: #495057;
 }
 
+.current-assignments h5 {
+    color: #667eea;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
 #assignmentsList {
     max-height: 300px;
     overflow-y: auto;
@@ -1544,6 +1550,21 @@ nav {
 .btn-small {
     padding: 6px 12px;
     font-size: 0.8rem;
+}
+
+/* Avertissement production */
+.production-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 20px;
+    color: #856404;
+}
+
+.production-warning p {
+    margin: 0;
+    font-size: 0.9rem;
 }
 
 /* Responsive pour le planning */
@@ -1600,5 +1621,33 @@ nav {
     
     .btn-admin {
         width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .header p {
+        font-size: 0.9rem;
+    }
+    
+    .planning-grid {
+        min-width: 600px;
+    }
+    
+    .modal {
+        width: 95%;
+        margin: 8px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 14px;
     }
 }
