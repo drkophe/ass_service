@@ -674,6 +674,66 @@ input, textarea {
 }
 
 /* ===========================================
+   🎯 PLANNING PIXEL-PERFECT
+   =========================================== */
+
+.planning-container {
+    background: white;
+    padding: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.planning-grid {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Lignes alternées */
+.planning-row:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.planning-row:hover {
+    background: rgba(0, 123, 255, 0.05);
+}
+
+/* Tâches avec positionnement pixel-perfect */
+.task-pixel-perfect {
+    user-select: none;
+}
+
+/* Bordures pour mieux voir les colonnes (debug) */
+.planning-row > div {
+    box-sizing: border-box;
+}
+
+/* Responsive avec largeurs fixes adaptées */
+@media (max-width: 1200px) {
+    .planning-container {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    .planning-container {
+        padding: 10px;
+    }
+    
+    /* Adapter les tâches sur mobile */
+    .task-pixel-perfect {
+        font-size: 0.7rem !important;
+        padding: 4px 6px !important;
+        min-width: 30px !important;
+    }
+}
+
+/* Focus pour accessibilité */
+.task-pixel-perfect:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* ===========================================
    PANNEAU DE CONTRÔLE DES ZONES - Optimisé mobile
    =========================================== */
 

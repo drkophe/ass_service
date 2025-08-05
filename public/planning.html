@@ -177,15 +177,31 @@
                             </select>
                         </div>
                         
-                        <div class="form-group">
-                            <label>Heure de début</label>
-                            <input type="time" id="adminStartTime" min="07:00" max="23:00" step="1800">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Heure de fin</label>
-                            <input type="time" id="adminEndTime" min="07:00" max="23:30" step="1800">
-                        </div>
+<!-- 🔄 REMPLACER les deux inputs d'heure existants par ceci : -->
+<div class="form-group">
+    <label>Heure de début</label>
+    <input type="time" 
+           id="adminStartTime" 
+           min="07:00" 
+           max="23:00" 
+           step="900">
+    <!-- step="900" = 15 minutes (900 secondes) -->
+    <small style="color: #666; font-size: 0.8rem;">
+        Format: HH:MM (ex: 09:15, 14:30)
+    </small>
+</div>
+
+<div class="form-group">
+    <label>Heure de fin</label>
+    <input type="time" 
+           id="adminEndTime" 
+           min="07:00" 
+           max="23:59" 
+           step="900">
+    <small style="color: #666; font-size: 0.8rem;">
+        La fin peut aller jusqu'à 23:59
+    </small>
+</div>
                         
                         <button class="btn btn-success" onclick="addAssignment()">➕ Ajouter l'affectation</button>
                     </div>
@@ -254,6 +270,112 @@
             }
         }
 
+        // 🆕 NOUVELLE FONCTION À AJOUTER - Placer après les autres fonctions, avant les événements socket
+function syncDayDisplay(targetDay) {
+    if (currentDay !== targetDay) {
+        currentDay = targetDay;
+        
+        // Mettre à jour les boutons d'onglets
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.toLowerCase().trim() === targetDay.toLowerCase()) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Mettre à jour le sélecteur admin si la modale est ouverte
+        const adminDaySelect = document.getElementById('adminDay');
+        if (adminDaySelect && adminDaySelect.value !== targetDay) {
+            adminDaySelect.value = targetDay;
+        }
+        
+        updatePlanning();
+        return true;
+    }
+    return false;
+}
+
+// 🆕 NOUVELLES FONCTIONS À AJOUTER après syncDayDisplay()
+
+/**
+ * Normalise un horaire au format HH:MM
+ * Gère les formats : "7:00", "07:00", "7h00", "7:30", etc.
+ */
+function normalizeTime(timeString) {
+    if (!timeString) return '';
+    
+    // Nettoyer la chaîne et extraire heures/minutes
+    const cleaned = timeString.replace(/[h\s]/g, ':').replace(/::+/g, ':');
+    const parts = cleaned.split(':');
+    
+    let hours = parseInt(parts[0]) || 0;
+    let minutes = parseInt(parts[1]) || 0;
+    
+    // Validation
+    hours = Math.max(0, Math.min(23, hours));
+    minutes = Math.max(0, Math.min(59, minutes));
+    
+    // Format HH:MM
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Valide qu'un horaire est dans la plage autorisée (7h-23h59)
+ */
+function validateTimeRange(timeString) {
+    const normalized = normalizeTime(timeString);
+    const [hours, minutes] = normalized.split(':').map(Number);
+    
+    // Entre 7h00 et 23h59
+    if (hours < 7 || hours > 23) {
+        return { valid: false, error: `L'horaire doit être entre 07:00 et 23:59` };
+    }
+    
+    return { valid: true, time: normalized };
+}
+
+/**
+ * Vérifie qu'une période est cohérente (fin > début)
+ */
+function validateTimePeriod(startTime, endTime) {
+    const start = normalizeTime(startTime);
+    const end = normalizeTime(endTime);
+    
+    const startValidation = validateTimeRange(start);
+    const endValidation = validateTimeRange(end);
+    
+    if (!startValidation.valid) {
+        return { valid: false, error: `Heure de début: ${startValidation.error}` };
+    }
+    
+    if (!endValidation.valid) {
+        return { valid: false, error: `Heure de fin: ${endValidation.error}` };
+    }
+    
+    // Convertir en minutes pour comparaison
+    const [startHours, startMinutes] = start.split(':').map(Number);
+    const [endHours, endMinutes] = end.split(':').map(Number);
+    
+    const startTotalMinutes = startHours * 60 + startMinutes;
+    const endTotalMinutes = endHours * 60 + endMinutes;
+    
+    if (endTotalMinutes <= startTotalMinutes) {
+        return { valid: false, error: 'L\'heure de fin doit être après l\'heure de début' };
+    }
+    
+    // Durée minimum de 15 minutes
+    if (endTotalMinutes - startTotalMinutes < 15) {
+        return { valid: false, error: 'La durée minimum est de 15 minutes' };
+    }
+    
+    return { 
+        valid: true, 
+        startTime: start, 
+        endTime: end,
+        durationMinutes: endTotalMinutes - startTotalMinutes
+    };
+}
+
         // ===========================================
         // GESTION DES CONNEXIONS SOCKET.IO
         // ===========================================
@@ -299,13 +421,30 @@
             vibrate([50]);
         });
         
-        socket.on('assignment_added', (data) => {
-            console.log('➕ Affectation ajoutée', data);
-            vibrate([100]);
-            if (isAdmin) {
-                loadAssignments();
+socket.on('assignment_added', (assignment) => {
+    console.log('➕ Affectation ajoutée', assignment);
+    
+    // 🆕 Basculer vers le jour de l'affectation ajoutée
+    if (currentDay !== assignment.day) {
+        currentDay = assignment.day;
+        
+        // Mettre à jour les boutons d'onglets
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.toLowerCase() === assignment.day) {
+                btn.classList.add('active');
             }
         });
+        
+        updatePlanning();
+        console.log(`🔄 Basculement automatique vers: ${assignment.day}`);
+    }
+    
+    vibrate([100]);
+    if (isAdmin) {
+        loadAssignments();
+    }
+});
         
         socket.on('assignment_deleted', (data) => {
             console.log('🗑️ Affectation supprimée', data);
@@ -338,94 +477,262 @@
             vibrate([30]);
         }
         
-        function updatePlanning() {
-            const grid = document.getElementById('planningGrid');
-            grid.innerHTML = '';
+function updatePlanning() {
+    const grid = document.getElementById('planningGrid');
+    grid.innerHTML = '';
+    
+    // 🎯 DIMENSIONS FIXES ET CLAIRES
+    const startHour = 7;
+    const endHour = 17;
+    const hoursCount = endHour - startHour + 1; // 17 heures
+    const nameColumnWidth = 150; // pixels
+    const hourColumnWidth = 60; // pixels par colonne d'heure
+    const totalGridWidth = nameColumnWidth + (hoursCount * hourColumnWidth);
+    
+    console.log(`📐 Grille: ${nameColumnWidth}px (noms) + ${hoursCount} × ${hourColumnWidth}px = ${totalGridWidth}px total`);
+    
+    // CSS avec largeurs fixes
+    const style = document.createElement('style');
+    style.id = 'planning-grid-style';
+    const oldStyle = document.getElementById('planning-grid-style');
+    if (oldStyle) oldStyle.remove();
+    
+    style.textContent = `
+        .planning-grid {
+            display: block;
+            min-width: ${totalGridWidth}px;
+            width: ${totalGridWidth}px;
+        }
+        
+        .planning-header-row,
+        .planning-row {
+            display: grid;
+            grid-template-columns: ${nameColumnWidth}px repeat(${hoursCount}, ${hourColumnWidth}px);
+            border-bottom: 1px solid #dee2e6;
+            width: 100%;
+        }
+        
+        .planning-header-row {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: white;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .planning-row {
+            min-height: 70px;
+            position: relative;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // En-tête
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'planning-header-row';
+    
+    // Colonne des noms
+    const nameHeader = document.createElement('div');
+    nameHeader.style.cssText = `
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 12px; 
+        font-weight: bold; 
+        background: #007bff; 
+        color: white;
+        font-size: 0.9rem;
+    `;
+    nameHeader.textContent = 'Horaires';
+    headerDiv.appendChild(nameHeader);
+    
+    // Colonnes horaires avec largeur fixe
+    for (let h = startHour; h <= endHour; h++) {
+        const hourDiv = document.createElement('div');
+        hourDiv.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 4px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            background: ${h % 2 === 0 ? '#f8f9fa' : '#e9ecef'};
+            border-right: 1px solid #dee2e6;
+            width: ${hourColumnWidth}px;
+        `;
+        hourDiv.textContent = `${h}h`;
+        headerDiv.appendChild(hourDiv);
+    }
+    grid.appendChild(headerDiv);
+    
+    // Données
+    const dayData = planningData[currentDay] || [];
+    let users = currentUser === 'all' 
+        ? ['Fabien BOYER', 'Sébastien RABIN', 'Laurent BOUILLER', 'Maxime TARDIVON', 
+           'Raphaël LEJEUNE', 'Enzo VELOSO', 'Jason FEBRISSY', 
+           'Lorenzo BOSI', 'Simon VANDECASTEEL', 'Samuel LALANDE', 
+           'Timothy RABIN', 'Thierry SELGI']
+        : [currentUser];
+    
+    // 🎯 FONCTION DE CALCUL EN PIXELS ABSOLUS
+    function calculatePixelPosition(startTime, endTime) {
+        const [startHours, startMins = 0] = startTime.split(':').map(Number);
+        const [endHours, endMins = 0] = endTime.split(':').map(Number);
+        
+        // Vérification de plage
+        if (startHours < startHour || endHours > endHour) {
+            console.warn(`⚠️ Heure hors plage: ${startTime}-${endTime}`);
+            return null;
+        }
+        
+        // 🎯 CALCUL DIRECT EN PIXELS
+        // Position de départ = largeur colonne nom + décalage horaire en pixels
+        const hoursSinceStart = startHours - startHour; // ex: 7h15 → 0.25h depuis 7h
+        const minutesFraction = startMins / 60; // ex: 15min → 0.25
+        const totalHourOffset = hoursSinceStart + minutesFraction; // ex: 0.25h
+        
+        const leftPixels = nameColumnWidth + (totalHourOffset * hourColumnWidth);
+        
+        // Largeur = durée en heures × largeur d'une colonne d'heure
+        const startTotalMinutes = startHours * 60 + startMins;
+        const endTotalMinutes = endHours * 60 + endMins;
+        const durationMinutes = endTotalMinutes - startTotalMinutes;
+        const durationHours = durationMinutes / 60;
+        
+        const widthPixels = durationHours * hourColumnWidth;
+        
+        return {
+            leftPixels: Math.round(leftPixels),
+            widthPixels: Math.round(widthPixels),
+            durationMinutes: durationMinutes,
+            debug: {
+                startTime,
+                endTime,
+                hoursSinceStart,
+                minutesFraction,
+                totalHourOffset,
+                durationHours
+            }
+        };
+    }
+    
+    // Créer les lignes utilisateur
+    users.forEach(user => {
+        const userAssignments = dayData.filter(a => a.user === user);
+        
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'planning-row';
+        
+        // Nom utilisateur
+        const userDiv = document.createElement('div');
+        userDiv.style.cssText = `
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            font-weight: 600;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            font-size: 0.9rem;
+            width: ${nameColumnWidth}px;
+        `;
+        userDiv.textContent = user;
+        rowDiv.appendChild(userDiv);
+        
+        // Cellules horaires (visuelles)
+        for (let h = startHour; h <= endHour; h++) {
+            const hourCell = document.createElement('div');
+            hourCell.style.cssText = `
+                background: ${h % 2 === 0 ? 'white' : '#fafafa'};
+                border-right: 1px solid #f0f0f0;
+                width: ${hourColumnWidth}px;
+            `;
+            rowDiv.appendChild(hourCell);
+        }
+        
+        // 🎯 TÂCHES AVEC POSITIONNEMENT PIXEL-PERFECT
+        userAssignments.forEach(assignment => {
+            const pos = calculatePixelPosition(assignment.startTime, assignment.endTime);
             
-            // Créer les heures de 7h à 23h
-            const hours = [];
-            for (let h = 7; h <= 23; h++) {
-                hours.push(`${h}:00`);
-                hours.push(`${h}:30`);
+            if (!pos) {
+                console.error(`❌ Position impossible pour: ${assignment.startTime}-${assignment.endTime}`);
+                return;
             }
             
-            // Créer l'en-tête avec les heures
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'planning-header-row';
-            headerDiv.innerHTML = '<div class="time-header">Horaires</div>';
-            hours.forEach(hour => {
-                const hourDiv = document.createElement('div');
-                hourDiv.className = 'hour-header';
-                hourDiv.textContent = hour;
-                headerDiv.appendChild(hourDiv);
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task-pixel-perfect';
+            
+            // 🎯 POSITIONNEMENT EN PIXELS ABSOLUS
+            taskDiv.style.cssText = `
+                position: absolute;
+                top: 4px;
+                bottom: 4px;
+                left: ${pos.leftPixels}px;
+                width: ${pos.widthPixels}px;
+                background-color: ${serviceColors[assignment.service]};
+                color: white;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                z-index: 10;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                cursor: pointer;
+                border: 1px solid rgba(255,255,255,0.2);
+                transition: all 0.2s ease;
+                min-width: 40px;
+            `;
+            
+            // Contenu adaptatif
+            const duration = pos.durationMinutes;
+            const isShort = duration < 60;
+            const isVeryShort = duration < 30;
+            
+            if (isVeryShort) {
+                taskDiv.innerHTML = `
+                    <div style="font-size: 0.65rem; font-weight: 600; text-align: center; line-height: 1.1;">
+                        ${serviceNames[assignment.service].substring(0, 6)}...
+                    </div>
+                    <div style="font-size: 0.55rem; text-align: center; opacity: 0.9;">
+                        ${assignment.startTime.substring(0, 5)}
+                    </div>
+                `;
+                taskDiv.style.padding = '4px 6px';
+            } else {
+                taskDiv.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 2px; font-size: ${isShort ? '0.7rem' : '0.75rem'}; line-height: 1.1;">
+                        ${isShort ? serviceNames[assignment.service].split(' ')[0] : serviceNames[assignment.service]}
+                    </div>
+                    <div style="font-size: ${isShort ? '0.6rem' : '0.65rem'}; opacity: 0.9; line-height: 1;">
+                        ${assignment.startTime} - ${assignment.endTime}
+                    </div>
+                `;
+            }
+            
+            // Hover effect
+            taskDiv.addEventListener('mouseenter', () => {
+                taskDiv.style.transform = 'translateY(-1px)';
+                taskDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                taskDiv.style.zIndex = '20';
             });
-            grid.appendChild(headerDiv);
             
-            // Récupérer les données du jour actuel
-            const dayData = planningData[currentDay] || [];
-            
-            // Filtrer par utilisateur si nécessaire
-            let users = currentUser === 'all' 
-                ? ['Fabien BOYER', 'Sébastien RABIN', 'Laurent BOUILLER', 'Maxime TARDIVON', 
-                   'Raphaël LEJEUNE', 'Enzo VELOSO', 'Jason FEBRISSY', 
-                   'Lorenzo BOSI', 'Simon VANDECASTEEL', 'Samuel LALANDE', 
-                   'Timothy RABIN', 'Thierry SELGI']
-                : [currentUser];
-            
-            // Créer une ligne par utilisateur
-            users.forEach(user => {
-                const userAssignments = dayData.filter(a => a.user === user);
-                
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'planning-row';
-                
-                // Nom de l'utilisateur
-                const userDiv = document.createElement('div');
-                userDiv.className = 'user-name';
-                userDiv.textContent = user;
-                rowDiv.appendChild(userDiv);
-                
-                // Créer les créneaux
-                hours.forEach((hour, index) => {
-                    const slotDiv = document.createElement('div');
-                    slotDiv.className = 'time-slot';
-                    slotDiv.dataset.hour = hour;
-                    slotDiv.dataset.user = user;
-                    
-                    // Vérifier si il y a une affectation pour ce créneau
-                    const assignment = userAssignments.find(a => {
-                        const startIndex = hours.indexOf(a.startTime);
-                        const endIndex = hours.indexOf(a.endTime);
-                        return index >= startIndex && index < endIndex;
-                    });
-                    
-                    if (assignment) {
-                        const startIndex = hours.indexOf(assignment.startTime);
-                        if (index === startIndex) {
-                            // Début d'une affectation
-                            const duration = hours.indexOf(assignment.endTime) - startIndex;
-                            slotDiv.className = 'assignment-block';
-                            slotDiv.style.gridColumn = `span ${duration}`;
-                            slotDiv.style.backgroundColor = serviceColors[assignment.service];
-                            slotDiv.innerHTML = `
-                                <div class="assignment-content">
-                                    <div class="assignment-service">${serviceNames[assignment.service]}</div>
-                                    <div class="assignment-time">${assignment.startTime} - ${assignment.endTime}</div>
-                                </div>
-                            `;
-                        } else {
-                            // Créneau occupé par une affectation précédente
-                            slotDiv.style.display = 'none';
-                        }
-                    }
-                    
-                    rowDiv.appendChild(slotDiv);
-                });
-                
-                grid.appendChild(rowDiv);
+            taskDiv.addEventListener('mouseleave', () => {
+                taskDiv.style.transform = 'translateY(0)';
+                taskDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                taskDiv.style.zIndex = '10';
             });
-        }
-
+            
+            rowDiv.appendChild(taskDiv);
+            
+            console.log(`📍 ${assignment.startTime}-${assignment.endTime} → ${pos.leftPixels}px (left), ${pos.widthPixels}px (width) | Debug:`, pos.debug);
+        });
+        
+        grid.appendChild(rowDiv);
+    });
+    
+    console.log(`✅ Planning pixel-perfect: ${totalGridWidth}px de large`);
+}
         // ===========================================
         // FONCTIONS ADMIN
         // ===========================================
@@ -456,43 +763,143 @@
             }
         }
         
-        function addAssignment() {
-            const day = document.getElementById('adminDay').value;
-            const user = document.getElementById('adminUser').value;
-            const service = document.getElementById('adminService').value;
-            const startTime = document.getElementById('adminStartTime').value;
-            const endTime = document.getElementById('adminEndTime').value;
-            
-            if (!user || !service || !startTime || !endTime) {
-                alert('Veuillez remplir tous les champs');
-                vibrate([200, 100, 200]);
-                return;
-            }
-            
-            if (startTime >= endTime) {
-                alert('L\'heure de fin doit être après l\'heure de début');
-                vibrate([200, 100, 200]);
-                return;
-            }
-            
-            const assignment = {
-                day,
-                user,
-                service,
-                startTime,
-                endTime
-            };
-            
-            socket.emit('add_assignment', assignment);
-            
-            // Reset du formulaire
-            document.getElementById('adminUser').value = '';
-            document.getElementById('adminService').value = '';
-            document.getElementById('adminStartTime').value = '';
-            document.getElementById('adminEndTime').value = '';
-            
-            vibrate([100]);
+//         function addAssignment() {
+//            const day = document.getElementById('adminDay').value;
+//            const user = document.getElementById('adminUser').value;
+//            const service = document.getElementById('adminService').value;
+//            const startTime = document.getElementById('adminStartTime').value;
+//            const endTime = document.getElementById('adminEndTime').value;
+//            
+//            if (!user || !service || !startTime || !endTime) {
+//                alert('Veuillez remplir tous les champs');
+//                vibrate([200, 100, 200]);
+//               return;
+//            }
+//            
+//            if (startTime >= endTime) {
+//                alert('L\'heure de fin doit être après l\'heure de début');
+//                vibrate([200, 100, 200]);
+//                return;
+//            }
+//            
+//            const assignment = {
+//                day,
+//                user,
+//                service,
+//                startTime,
+//                endTime
+//            };
+//            
+//            socket.emit('add_assignment', assignment);
+//            
+//            // Reset du formulaire
+//            document.getElementById('adminUser').value = '';
+//            document.getElementById('adminService').value = '';
+//           document.getElementById('adminStartTime').value = '';
+//            document.getElementById('adminEndTime').value = '';
+ //           
+//            vibrate([100]);
+//        }
+function addAssignment() {
+    const day = document.getElementById('adminDay').value;
+    const user = document.getElementById('adminUser').value;
+    const service = document.getElementById('adminService').value;
+    const rawStartTime = document.getElementById('adminStartTime').value;
+    const rawEndTime = document.getElementById('adminEndTime').value;
+    
+    // 🆕 VALIDATION DE BASE
+    if (!user || !service || !rawStartTime || !rawEndTime) {
+        alert('Veuillez remplir tous les champs');
+        vibrate([200, 100, 200]);
+        return;
+    }
+    
+    // 🆕 VALIDATION ET NORMALISATION DES HORAIRES
+    const timeValidation = validateTimePeriod(rawStartTime, rawEndTime);
+    if (!timeValidation.valid) {
+        alert(`Erreur d'horaire: ${timeValidation.error}`);
+        vibrate([200, 100, 200]);
+        return;
+    }
+    
+    const startTime = timeValidation.startTime;
+    const endTime = timeValidation.endTime;
+    const duration = timeValidation.durationMinutes;
+    
+    console.log(`✅ Horaires validés: ${startTime} - ${endTime} (${duration} min)`);
+    
+    // 🆕 VÉRIFICATION DES CONFLITS AMÉLIORÉE
+    const dayAssignments = planningData[day] || [];
+    const hasConflict = dayAssignments.some(existing => {
+        if (existing.user !== user) return false;
+        
+        // Convertir en minutes pour comparaison précise
+        const toMinutes = (time) => {
+            const [h, m] = normalizeTime(time).split(':').map(Number);
+            return h * 60 + m;
+        };
+        
+        const newStart = toMinutes(startTime);
+        const newEnd = toMinutes(endTime);
+        const existingStart = toMinutes(existing.startTime);
+        const existingEnd = toMinutes(existing.endTime);
+        
+        // Vérifier le chevauchement avec une marge de sécurité
+        const overlap = (newStart < existingEnd) && (newEnd > existingStart);
+        
+        if (overlap) {
+            console.warn(`Conflit détecté avec: ${existing.startTime}-${existing.endTime}`);
         }
+        
+        return overlap;
+    });
+    
+    if (hasConflict) {
+        alert(`Conflit d'horaire: ${user} est déjà affecté(e) sur une période qui chevauche avec ${startTime}-${endTime}`);
+        vibrate([200, 100, 200]);
+        return;
+    }
+    
+    // 🆕 CRÉATION DE L'AFFECTATION AVEC HORAIRES NORMALISÉS
+    const assignment = {
+        day,
+        user,
+        service,
+        startTime, // Horaire normalisé
+        endTime,   // Horaire normalisé
+        duration   // Durée en minutes (pour info)
+    };
+    
+    console.log(`📤 Envoi de l'affectation:`, assignment);
+    socket.emit('add_assignment', assignment);
+    
+    // Basculer automatiquement vers l'onglet du jour ajouté
+    if (currentDay !== day) {
+        currentDay = day;
+        
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.toLowerCase() === day) {
+                btn.classList.add('active');
+            }
+        });
+        
+        updatePlanning();
+        console.log(`🔄 Basculement automatique vers l'onglet: ${day}`);
+    }
+    
+    // Reset du formulaire
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminService').value = '';
+    document.getElementById('adminStartTime').value = '';
+    document.getElementById('adminEndTime').value = '';
+    
+    vibrate([100]);
+    
+    // 🆕 FEEDBACK VISUEL DE SUCCÈS
+    const successMessage = `✅ Tâche ajoutée: ${user} - ${serviceNames[service]} (${startTime}-${endTime})`;
+    console.log(successMessage);
+}
         
         function deleteAssignment(assignmentId) {
             if (confirm('Supprimer cette affectation ?')) {
@@ -549,6 +956,27 @@
                     vibrate([30]);
                 }, { passive: true });
             });
+
+                // 🆕 AJOUTER CES LIGNES À LA FIN :
+    // Ajout d'une animation CSS pour le feedback visuel
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes highlight {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.8);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 0 10px rgba(52, 152, 219, 0.2);
+                transform: scale(1.02);
+            }
+            100% { 
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+                transform: scale(1);
+            }
+        }
+    `;
+    document.head.appendChild(style);
         });
         
         // Empêcher le zoom sur double-tap
