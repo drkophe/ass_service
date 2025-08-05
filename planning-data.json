@@ -3,18 +3,18 @@
     {
       "day": "vendredi",
       "user": "Fabien BOYER",
-      "service": "accueil-porte-3",
-      "startTime": "10:00",
-      "endTime": "11:00",
-      "id": "df1fdc2a-79a0-4f6c-8a4e-055b9537e3d8"
-    },
-    {
-      "day": "vendredi",
-      "user": "Fabien BOYER",
       "service": "accueil-porte-1",
       "startTime": "07:00",
       "endTime": "08:00",
       "id": "e43bfd85-abe8-4e1f-b706-5367405e7db6"
+    },
+    {
+      "day": "vendredi",
+      "user": "Fabien BOYER",
+      "service": "accueil-porte-3",
+      "startTime": "10:00",
+      "endTime": "11:00",
+      "id": "df1fdc2a-79a0-4f6c-8a4e-055b9537e3d8"
     },
     {
       "day": "vendredi",
@@ -31,6 +31,14 @@
       "startTime": "13:30",
       "endTime": "15:30",
       "id": "a07691f5-45d0-4f3d-a837-189ee0030eat"
+    },
+    {
+      "day": "vendredi",
+      "user": "Fabien BOYER",
+      "service": "placement",
+      "startTime": "18:00",
+      "endTime": "19:00",
+      "id": "96c56dd1-7d0f-47b4-a4fd-523707bb7f93"
     }
   ],
   "samedi": [],
