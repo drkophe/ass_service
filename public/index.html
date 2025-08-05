@@ -20,7 +20,10 @@
         <div class="main-content">
             <!-- Section pour gérer les demandes -->
             <div class="section management-section">
-                <h2 class="section-title">Demandes en cours</h2>
+                <h2 class="section-title">
+                    Demandes en cours
+                    <span id="authStatus" class="auth-status">🔒 Lecture seule</span>
+                </h2>
                 <p id="available-places-resume"><span id="totalAvailable">1509</span> places disponibles</p>
                 
                 <div class="filters">
@@ -82,12 +85,36 @@
                         <textarea id="comment" placeholder="Informations supplémentaires..." rows="2"></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
                         + Créer la demande
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary" id="authBtn" onclick="openAuthModal()" style="display: none;">
+                        🔐 Se connecter pour agir
                     </button>
                 </form>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Modal d'authentification -->
+    <div class="modal-overlay" id="authModalOverlay" onclick="closeAuthModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>🔐 Authentification requise</h3>
+                <button class="btn-close" onclick="closeAuthModal()">✖</button>
+            </div>
+            <div class="modal-body">
+                <p>Pour créer ou traiter des demandes, veuillez vous authentifier :</p>
+                <div class="form-group">
+                    <label for="authPassword">Mot de passe</label>
+                    <input type="password" id="authPassword" placeholder="Entrez le mot de passe" maxlength="10">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="authenticate()">Se connecter</button>
+            </div>
         </div>
     </div>
 
@@ -179,7 +206,7 @@
     <script>
         /**
          * 🎯 APPLICATION DE GESTION DES DEMANDES
-         * Version optimisée mobile sans notifications
+         * Version optimisée mobile sans notifications + authentification
          */
 
         // ===========================================
@@ -197,6 +224,108 @@
         let zones = {};
         let connectedUsers = 0;
         let currentRequestForZone = null;
+        let isAuthenticated = false; // Variable d'authentification
+
+        // ===========================================
+        // GESTION DE L'AUTHENTIFICATION
+        // ===========================================
+
+        function checkAuthStatus() {
+            try {
+                const authStatus = localStorage.getItem('gestion_places_auth');
+                isAuthenticated = authStatus === 'true';
+                updateAuthUI();
+                console.log('🔐 Statut auth récupéré:', isAuthenticated);
+            } catch (e) {
+                console.warn('Impossible de récupérer le statut auth:', e);
+                isAuthenticated = false;
+                updateAuthUI();
+            }
+        }
+
+        function saveAuthStatus() {
+            try {
+                localStorage.setItem('gestion_places_auth', 'true');
+                console.log('🔐 Statut auth sauvegardé');
+            } catch (e) {
+                console.warn('Impossible de sauvegarder le statut auth:', e);
+            }
+        }
+
+        function clearAuthStatus() {
+            try {
+                localStorage.removeItem('gestion_places_auth');
+                console.log('🔐 Statut auth effacé');
+            } catch (e) {
+                console.warn('Impossible d\'effacer le statut auth:', e);
+            }
+        }
+
+        function updateAuthUI() {
+            const authStatus = document.getElementById('authStatus');
+            const submitBtn = document.getElementById('submitBtn');
+            const authBtn = document.getElementById('authBtn');
+            const requestForm = document.getElementById('requestForm');
+            
+            if (isAuthenticated) {
+                authStatus.textContent = '🔓 Mode interaction';
+                authStatus.className = 'auth-status authenticated';
+                submitBtn.style.display = 'block';
+                authBtn.style.display = 'none';
+                
+                // Activer le formulaire
+                const formElements = requestForm.querySelectorAll('input, select, textarea, button');
+                formElements.forEach(el => el.disabled = false);
+            } else {
+                authStatus.textContent = '🔒 Lecture seule';
+                authStatus.className = 'auth-status';
+                submitBtn.style.display = 'none';
+                authBtn.style.display = 'block';
+                
+                // Désactiver le formulaire
+                const formElements = requestForm.querySelectorAll('input, select, textarea');
+                formElements.forEach(el => el.disabled = true);
+            }
+        }
+
+        function openAuthModal() {
+            document.getElementById('authModalOverlay').style.display = 'flex';
+            document.getElementById('authPassword').focus();
+            vibrate([50]);
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModalOverlay').style.display = 'none';
+            document.getElementById('authPassword').value = '';
+            vibrate([30]);
+        }
+
+        function authenticate() {
+            const password = document.getElementById('authPassword').value;
+            
+            if (password === '2025') {
+                isAuthenticated = true;
+                saveAuthStatus();
+                updateAuthUI();
+                closeAuthModal();
+                console.log('🔓 Authentification réussie');
+                vibrate([100, 50, 100]); // Vibration de succès
+            } else {
+                console.log('❌ Authentification échouée');
+                vibrate([200, 100, 200]); // Vibration d'erreur
+                
+                // Animation d'erreur sur le champ
+                const input = document.getElementById('authPassword');
+                input.style.borderColor = '#dc3545';
+                input.style.backgroundColor = '#fff5f5';
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                    input.style.backgroundColor = '';
+                    input.value = '';
+                    input.focus();
+                }, 1000);
+            }
+        }
 
         // ===========================================
         // GESTION DE LA MÉMOIRE UTILISATEUR
@@ -387,6 +516,12 @@
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
+                // Vérifier l'authentification
+                if (!isAuthenticated) {
+                    openAuthModal();
+                    return false;
+                }
+                
                 console.log('📝 Tentative de création de demande...');
                 
                 const formData = {
@@ -532,8 +667,8 @@
 
                     ${request.status === 'pending' ? `
                         <div class="request-actions">
-                            <button class="btn btn-warning" onclick="takeInCharge('${request.id}')">
-                                Prendre en charge
+                            <button class="btn btn-warning" onclick="takeInCharge('${request.id}')" ${!isAuthenticated ? 'disabled' : ''}>
+                                ${isAuthenticated ? 'Prendre en charge' : '🔒 Connexion requise'}
                             </button>
                         </div>
                     ` : ''}
@@ -548,6 +683,12 @@
         // ===========================================
 
         function takeInCharge(requestId) {
+            // Vérifier l'authentification
+            if (!isAuthenticated) {
+                openAuthModal();
+                return;
+            }
+            
             console.log('⏳ Prise en charge de la demande:', requestId);
             vibrate([100]); // Feedback tactile
             
@@ -585,6 +726,12 @@
         let currentModalStep = 'treatment'; // 'treatment' ou 'zone'
 
         function openZoneModal(requestId, action) {
+            // Vérifier l'authentification
+            if (!isAuthenticated) {
+                openAuthModal();
+                return;
+            }
+            
             const request = currentRequests.get(requestId);
             if (!request) return;
             
@@ -867,7 +1014,10 @@
         // ===========================================
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Application des demandes initialisée (version mobile)');
+            console.log('🚀 Application des demandes initialisée (version mobile + auth)');
+            
+            // Vérifier le statut d'authentification
+            checkAuthStatus();
             
             // Configuration du gestionnaire de formulaire
             setupFormHandler();
@@ -891,6 +1041,13 @@
             if (handlerNameInput) {
                 handlerNameInput.addEventListener('change', updateConfirmButtonState);
             }
+
+            // Listener pour la touche Entrée dans le champ mot de passe
+            document.getElementById('authPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    authenticate();
+                }
+            });
 
             // Ajout de listeners pour le feedback tactile
             document.querySelectorAll('.btn, .zone, .request-card').forEach(element => {
