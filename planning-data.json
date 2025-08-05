@@ -3,10 +3,26 @@
     {
       "day": "vendredi",
       "user": "Fabien BOYER",
+      "service": "accueil-porte-3",
+      "startTime": "10:00",
+      "endTime": "11:00",
+      "id": "df1fdc2a-79a0-4f6c-8a4e-055b9537e3d8"
+    },
+    {
+      "day": "vendredi",
+      "user": "Fabien BOYER",
       "service": "accueil-porte-1",
       "startTime": "12:30",
       "endTime": "13:30",
       "id": "a07691f5-45d0-4f3d-a837-189ee0030ead"
+    },
+    {
+      "day": "vendredi",
+      "user": "Fabien BOYER",
+      "service": "accueil-porte-2",
+      "startTime": "13:30",
+      "endTime": "15:30",
+      "id": "a07691f5-45d0-4f3d-a837-189ee0030eat"
     }
   ],
   "samedi": [],
