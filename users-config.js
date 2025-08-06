@@ -47,6 +47,7 @@ const USERS_LIST = [
     'MOUELLE Louis',
     'NGOMA Maxence',
     'NGOMA Vince',
+    'NJANTA Léonard',
     'NSONGA Jonathan',
     'ONCOMODE Andrew',
     'PAMBOU Loic',
