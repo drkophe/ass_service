@@ -2,7 +2,7 @@
   "vendredi": [
     {
       "day": "vendredi",
-      "user": "Fabien BOYER",
+      "user": "BOYER Fabien",
       "service": "accueil-porte-1",
       "startTime": "07:15",
       "endTime": "09:45",
@@ -11,7 +11,7 @@
     },
     {
       "day": "vendredi",
-      "user": "Fabien BOYER",
+      "user": "BOYER Fabien",
       "service": "accueil-porte-2",
       "startTime": "09:45",
       "endTime": "11:00",
@@ -20,7 +20,7 @@
     },
     {
       "day": "vendredi",
-      "user": "Sébastien RABIN",
+      "user": "RABIN Sébastien",
       "service": "accueil-porte-1",
       "startTime": "10:00",
       "endTime": "11:00",
@@ -29,7 +29,7 @@
     },
     {
       "day": "vendredi",
-      "user": "Laurent BOUILLER",
+      "user": "BOUILLER Laurent",
       "service": "accueil-porte-1",
       "startTime": "15:00",
       "endTime": "16:00",
@@ -38,7 +38,7 @@
     },
     {
       "day": "vendredi",
-      "user": "Jason FEBRISSY",
+      "user": "FEBRISSY Jason",
       "service": "accueil-porte-3",
       "startTime": "15:00",
       "endTime": "17:00",
@@ -47,7 +47,7 @@
     },
     {
       "day": "vendredi",
-      "user": "Enzo VELOSO",
+      "user": "VELOSO Enzo",
       "service": "ronde-exterieur",
       "startTime": "15:00",
       "endTime": "17:00",
@@ -58,7 +58,7 @@
   "samedi": [
     {
       "day": "samedi",
-      "user": "Laurent BOUILLER",
+      "user": "BOUILLER Laurent",
       "service": "ronde-exterieur",
       "startTime": "10:00",
       "endTime": "12:00",
@@ -67,7 +67,7 @@
     },
     {
       "day": "samedi",
-      "user": "Fabien BOYER",
+      "user": "BOYER Fabien",
       "service": "accueil-porte-2",
       "startTime": "16:00",
       "endTime": "17:00",
