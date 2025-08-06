@@ -2,77 +2,23 @@
   "vendredi": [
     {
       "day": "vendredi",
-      "user": "BOYER Fabien",
-      "service": "accueil-porte-1",
-      "startTime": "07:15",
-      "endTime": "09:45",
-      "duration": 150,
-      "id": "b24cfe6a-667f-4c6e-a009-375a5a40f5e8"
-    },
-    {
-      "day": "vendredi",
-      "user": "BOYER Fabien",
-      "service": "accueil-porte-2",
-      "startTime": "09:45",
-      "endTime": "11:00",
-      "duration": 75,
-      "id": "ac836f97-9d7c-4657-be4b-85ccc7589461"
-    },
-    {
-      "day": "vendredi",
-      "user": "RABIN Sébastien",
-      "service": "accueil-porte-1",
+      "user": "BOSI Lorenzo",
+      "service": "porte-1",
       "startTime": "10:00",
-      "endTime": "11:00",
-      "duration": 60,
-      "id": "775ab49e-ab86-4d54-95db-63d7f3054cdb"
-    },
-    {
-      "day": "vendredi",
-      "user": "BOUILLER Laurent",
-      "service": "accueil-porte-1",
-      "startTime": "15:00",
-      "endTime": "16:00",
-      "duration": 60,
-      "id": "33dc78a7-ed8f-4379-afe4-bcd6c363469d"
-    },
-    {
-      "day": "vendredi",
-      "user": "FEBRISSY Jason",
-      "service": "accueil-porte-3",
-      "startTime": "15:00",
-      "endTime": "17:00",
-      "duration": 120,
-      "id": "556f23e7-7688-40c1-82ae-55ef4f64158f"
-    },
-    {
-      "day": "vendredi",
-      "user": "VELOSO Enzo",
-      "service": "ronde-exterieur",
-      "startTime": "15:00",
-      "endTime": "17:00",
-      "duration": 120,
-      "id": "b9efcb88-cf28-4932-a3ae-c3f37f08483d"
+      "endTime": "12:45",
+      "duration": 165,
+      "id": "5565d8ec-2c36-4e24-8dc7-1bfe01b616be"
     }
   ],
   "samedi": [
     {
       "day": "samedi",
-      "user": "BOUILLER Laurent",
-      "service": "ronde-exterieur",
-      "startTime": "10:00",
-      "endTime": "12:00",
-      "duration": 120,
-      "id": "3103d524-bb8b-4468-ab2f-0c61d7037c7c"
-    },
-    {
-      "day": "samedi",
-      "user": "BOYER Fabien",
-      "service": "accueil-porte-2",
-      "startTime": "16:00",
+      "user": "BAZARD Gwen",
+      "service": "porte-2",
+      "startTime": "15:00",
       "endTime": "17:00",
-      "duration": 60,
-      "id": "7621ca46-8bda-4ef4-9931-1b7cbf8e7def"
+      "duration": 120,
+      "id": "c6ba2675-bda7-49f3-a708-03620080f307"
     }
   ],
   "dimanche": []

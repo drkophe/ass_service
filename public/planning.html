@@ -97,37 +97,21 @@
             </div>
         </div>
         
-        <!-- Légende des services -->
+        <!-- Légende des services - MISE À JOUR avec les 3 nouveaux services -->
         <div class="services-legend">
             <h3>📋 Services</h3>
             <div class="services-list">
                 <div class="service-item">
                     <span class="service-color" style="background-color: #3498db;"></span>
-                    <span>Accueil Porte 1</span>
+                    <span>Porte 1</span>
                 </div>
                 <div class="service-item">
                     <span class="service-color" style="background-color: #2ecc71;"></span>
-                    <span>Accueil Porte 2</span>
-                </div>
-                <div class="service-item">
-                    <span class="service-color" style="background-color: #f39c12;"></span>
-                    <span>Accueil Porte 3</span>
+                    <span>Porte 2</span>
                 </div>
                 <div class="service-item">
                     <span class="service-color" style="background-color: #9b59b6;"></span>
-                    <span>Placement</span>
-                </div>
-                <div class="service-item">
-                    <span class="service-color" style="background-color: #e74c3c;"></span>
-                    <span>Ronde Extérieur</span>
-                </div>
-                <div class="service-item">
-                    <span class="service-color" style="background-color: #f1c40f;"></span>
-                    <span>Surveillance Sécurité Incendie</span>
-                </div>
-                <div class="service-item">
-                    <span class="service-color" style="background-color: #e91e63;"></span>
-                    <span>Podium</span>
+                    <span>Présidence</span>
                 </div>
             </div>
         </div>
@@ -243,45 +227,41 @@
                             </select>
                         </div>
                         
+                        <!-- SÉLECTEUR DE SERVICE MISE À JOUR avec les 3 nouveaux services -->
                         <div class="form-group">
                             <label>Service</label>
                             <select id="adminService">
                                 <option value="">Sélectionner un service</option>
-                                <option value="accueil-porte-1">Accueil Porte 1</option>
-                                <option value="accueil-porte-2">Accueil Porte 2</option>
-                                <option value="accueil-porte-3">Accueil Porte 3</option>
-                                <option value="placement">Placement</option>
-                                <option value="ronde-exterieur">Ronde Extérieur</option>
-                                <option value="surveillance-securite">Surveillance Sécurité Incendie</option>
-                                <option value="podium">Podium</option>
+                                <option value="porte-1">Porte 1</option>
+                                <option value="porte-2">Porte 2</option>
+                                <option value="presidence">Présidence</option>
                             </select>
                         </div>
                         
-<!-- 🔄 REMPLACER les deux inputs d'heure existants par ceci : -->
-<div class="form-group">
-    <label>Heure de début</label>
-    <input type="time" 
-           id="adminStartTime" 
-           min="07:00" 
-           max="23:00" 
-           step="900">
-    <!-- step="900" = 15 minutes (900 secondes) -->
-    <small style="color: #666; font-size: 0.8rem;">
-        Format: HH:MM (ex: 09:15, 14:30)
-    </small>
-</div>
+                        <div class="form-group">
+                            <label>Heure de début</label>
+                            <input type="time" 
+                                   id="adminStartTime" 
+                                   min="07:00" 
+                                   max="23:00" 
+                                   step="900">
+                            <!-- step="900" = 15 minutes (900 secondes) -->
+                            <small style="color: #666; font-size: 0.8rem;">
+                                Format: HH:MM (ex: 09:15, 14:30)
+                            </small>
+                        </div>
 
-<div class="form-group">
-    <label>Heure de fin</label>
-    <input type="time" 
-           id="adminEndTime" 
-           min="07:00" 
-           max="23:59" 
-           step="900">
-    <small style="color: #666; font-size: 0.8rem;">
-        La fin peut aller jusqu'à 23:59
-    </small>
-</div>
+                        <div class="form-group">
+                            <label>Heure de fin</label>
+                            <input type="time" 
+                                   id="adminEndTime" 
+                                   min="07:00" 
+                                   max="23:59" 
+                                   step="900">
+                            <small style="color: #666; font-size: 0.8rem;">
+                                La fin peut aller jusqu'à 23:59
+                            </small>
+                        </div>
                         
                         <button class="btn btn-success" onclick="addAssignment()">➕ Ajouter l'affectation</button>
                     </div>
@@ -320,24 +300,18 @@
         let isAdmin = false;
         let isProduction = false;
         
+        // COULEURS DES SERVICES MISE À JOUR - Seulement les 3 nouveaux services
         const serviceColors = {
-            'accueil-porte-1': '#3498db',
-            'accueil-porte-2': '#2ecc71',
-            'accueil-porte-3': '#f39c12',
-            'placement': '#9b59b6',
-            'ronde-exterieur': '#e74c3c',
-            'surveillance-securite': '#f1c40f',
-            'podium': '#e91e63'
+            'porte-1': '#3498db',    // Bleu
+            'porte-2': '#2ecc71',    // Vert
+            'presidence': '#9b59b6'  // Violet
         };
         
+        // NOMS DES SERVICES MISE À JOUR - Seulement les 3 nouveaux services
         const serviceNames = {
-            'accueil-porte-1': 'Accueil Porte 1',
-            'accueil-porte-2': 'Accueil Porte 2',
-            'accueil-porte-3': 'Accueil Porte 3',
-            'placement': 'Placement',
-            'ronde-exterieur': 'Ronde Extérieur',
-            'surveillance-securite': 'Surveillance Sécurité Incendie',
-            'podium': 'Podium'
+            'porte-1': 'Porte 1',
+            'porte-2': 'Porte 2',
+            'presidence': 'Présidence'
         };
 
         // ===========================================
@@ -997,7 +971,8 @@ function addAssignment() {
         // ===========================================
         
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Application Planning initialisée');
+            console.log('🚀 Application Planning initialisée avec les nouveaux services');
+            console.log('🎯 Services disponibles:', Object.keys(serviceNames));
             
             // Demander les données au serveur
             if (socket.connected) {
