@@ -15,7 +15,6 @@ const USERS_LIST = [
     'BREARD Frédérique',
     'COUCHY-ROMAIN Rony',
     'DAMYS Geoffrey',
-    'DJANTA Leonard',
     'DJONFO Sylvio',
     'DUCHÈNE Mathieu',
     'FEBRISSY Jason',
