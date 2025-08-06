@@ -44,6 +44,7 @@ const USERS_LIST = [
     'MILLIÈRE Adriel',
     'MIZÈLE Sohann',
     'MONDOLUS Olondieu',
+    'MOPALIN Gilbert',
     'MOUELLE Louis',
     'NGOMA Maxence',
     'NGOMA Vince',
